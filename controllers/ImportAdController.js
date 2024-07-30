@@ -1,0 +1,72 @@
+const ImportAd = require('../models/ImportAdModel');
+const multer = require('multer');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
+
+// Set up multer storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|pdf|mp4/;
+    const mimeType = fileTypes.test(file.mimetype);
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimeType && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type'));
+  }
+});
+
+exports.createImportAd = [upload.single('file'), async (req, res) => {
+  try {
+    const { userId } = req.body;
+    let imageUrl = '';
+    let pdfUrl = '';
+    let videoUrl = '';
+
+    if (req.file) {
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const filePath = path.join(__dirname, '../uploads', fileName);
+
+      if (req.file.mimetype.startsWith('image')) {
+        await sharp(req.file.buffer)
+          .resize(300, 300)
+          .toFile(filePath);
+        imageUrl = `/uploads/${fileName}`;
+      } else {
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        if (req.file.mimetype === 'application/pdf') {
+          pdfUrl = `/uploads/${fileName}`;
+        } else if (req.file.mimetype.startsWith('video')) {
+          videoUrl = `/uploads/${fileName}`;
+        }
+      }
+    }
+
+    const newImportAd = new ImportAd({
+      userId,
+      imageUrl,
+      pdfUrl,
+      videoUrl
+    });
+
+    const savedImportAd = await newImportAd.save();
+    res.status(201).json(savedImportAd);
+  } catch (error) {
+    console.error('MongoDB Error:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}];
+
+exports.getAllAds = async (req, res) => {
+  try {
+    const ads = await ImportAd.find();
+    res.status(200).json(ads);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
