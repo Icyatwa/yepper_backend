@@ -1,18 +1,35 @@
-// ImportAdModel.js
+
 const mongoose = require('mongoose');
 
 const ImportAdSchema = new mongoose.Schema({
-  ImportAdId: { type: String, required: true },
+  // user ID
+  userId: { type: String, required: true },
+
+  // ad
   imageUrl: { type: String },
   pdfUrl: { type: String },
-  videoUrl: { type: String }
+  videoUrl: { type: String },
+
+  // categories
+  manufacturing: { type: String },
+  technology: { type: String },
+  agriculture: { type: String },
+  retail: { type: String },
+  services: { type: String },
+  hospitality: { type: String },
+  transportionAndLogistics: { type: String },
+  realEstate: { type: String },
+
+  // business
+  businessName: { type: String, required: true },
+  businessLocation: { type: String },
+  adDescription: { type: String, required: true },
 }, { timestamps: true });
 
 const ImportAd = mongoose.model('ImportAd', ImportAdSchema);
 
 module.exports = ImportAd;
 
-// ImportAdController.js
 const ImportAd = require('../models/ImportAdModel');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -37,7 +54,16 @@ const upload = multer({
 
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
-    const { ImportAdId } = req.body;
+    const { 
+      userId,
+      businessName,
+      businessLocation,
+      adDescription,
+    } = req.body;
+    
+    const categories = ['manufacturing', 'technology', 'agriculture', 'retail', 'services', 'hospitality', 'transportionAndLogistics', 'realEstate'];
+    const selectedCategory = categories.find(category => req.body[category]);
+
     let imageUrl = '';
     let pdfUrl = '';
     let videoUrl = '';
@@ -62,10 +88,14 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     }
 
     const newImportAd = new ImportAd({
-      ImportAdId,
+      userId,
       imageUrl,
       pdfUrl,
-      videoUrl
+      videoUrl,
+      [selectedCategory]: selectedCategory,
+      businessName,
+      businessLocation,
+      adDescription,
     });
 
     const savedImportAd = await newImportAd.save();
@@ -75,7 +105,6 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
-
 
 exports.getAllAds = async (req, res) => {
   try {
@@ -87,135 +116,231 @@ exports.getAllAds = async (req, res) => {
   }
 };
 
-// ImportAdRoutes.js
-const express = require('express');
-const router = express.Router();
-const ImportAdController = require('../controllers/ImportAdController');
-
-router.post('/', ImportAdController.createImportAd);
-router.get('/', ImportAdController.getAllAds);
-
-module.exports = router;
-
-
-
-// server.js
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/database');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
-const importAdRoutes = require('./routes/ImportAdRoutes');
-
-const app = express(); 
-const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use('/api/importAds', importAdRoutes);
-
-const server = http.createServer(app);
-const io = socketIo(server); 
-
-module.exports.io = io;
-connectDB()
-  .then(() => {
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+exports.getAdsByUserId = async (req, res) => {
+  const userId = req.params.userId;
+  try {
+    const ad = await ImportAd.find({ userId });
+    if (!ad) {
+      return res.status(404).json({ message: 'Ad not found' });
+    }
+    res.status(200).json(ad);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}; 
 
 
-// ImportAd.js
 import React, { useState } from 'react';
-import { useClerk } from "@clerk/clerk-react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-import Header from '../../pages/header';
-
 const ImportAd = () => {
-    const navigate = useNavigate();
-    const { user } = useClerk();
-    const [file, setFile] = useState(null);
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-    const displayError = (message) => {
-        setError(message);
-        setTimeout(() => {
-            setError(null);
-        }, 3000);
+  const handleFileChange = (e) => { 
+    setFile(e.target.files[0]);
+    setError(null);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+
+    try{
+      if(!file){
+        alert('Please choose the Ad file');
+      }else{
+        navigate('/categories',{
+          state:{
+            file
+          }
+        })
+      }
+
+    }catch(error){
+      alert('An error happened please check console');
+      console.log(error);
     }
 
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
-        setError(null);
-    };
+  };
 
-    const handleSave = async (e) => {
-        e.preventDefault();
-        if (!file) {
-            displayError('Please upload a file.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('ImportAdId', user.id);
-        formData.append('file', file);
-
-        try {
-            setLoading(true);
-            const response = await axios.post('http://localhost:5000/api/importAds', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            if (response.status !== 201) {
-                displayError('Failed to create an ad. Please try again.');
-            } else {
-                setError(null);
-                navigate('/');
-            }
-        } catch (error) {
-            displayError('An error occurred while sending the request.');
-            console.error('Fetch error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className='AdRegister'>
-            <div className='registerPage'>
-                <form className='registerForm' onSubmit={handleSave}>
-                    <input
-                        type="file"
-                        accept="image/*,application/pdf,video/*"
-                        onChange={handleFileChange}
-                        required
-                        className='inputField'
-                    />
-                    {error && <p className='errorMessage'>{error}</p>}
-                    <button type="submit" disabled={loading} className='submitButton'>
-                        {loading ? 'Uploading...' : 'Upload'}
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-}; 
+  return (
+    <div className='AdRegister'>
+      <div className='registerPage'>
+        <form className='registerForm' onSubmit={handleSave}>
+          <input
+            type="file"
+            accept="image/*,application/pdf,video/*"
+            onChange={handleFileChange}
+            required
+            className='inputField'
+          />
+          {error && <p className='errorMessage'>{error}</p>}
+          <button type="submit" disabled={loading} className='submitButton'>
+            {loading ? 'Uploading...' : 'Upload'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 export default ImportAd;
 
-here's the logic, i uploaded a picture and after uploading it i want to upload others like pdf, videos or more images with my account because as you can see this is the ads management system where a user should upload his/her ads as many as he/she can, so here i have an issue, when i add an image for example, the system shows that the image is uploaded successfully but when i try to add another image, a pdf or a video the system says:Server is running on port 5000
-MongoDB Error: MongoServerError: E11000 duplicate key error collection: test.importads index: ImportAdId_1 dup key: { ImportAdId: 
-null } but what i want is that the users can add as many files as they want not just adding one file and be required to update it(delete it) in order to add another one no!
+
+import React, { useState } from 'react';
+import { useClerk } from "@clerk/clerk-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from 'axios';
+
+function Categories() {
+  const { user } = useClerk();
+  const locationVar = useLocation();
+  const { file } = locationVar.state || {};
+  const navigate = useNavigate();
+  
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedCategory) {
+      setError('Please select a category');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userId', user.id);
+    formData.append('businessName', 'Example Business'); // Replace with actual business name
+    formData.append('adDescription', 'Example Description'); // Replace with actual description
+    formData.append(selectedCategory, selectedCategory); // Append the selected category
+
+    try {
+      const response = await axios.post('/api/importAd', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log(response.data);
+      navigate('/success'); // Navigate to success page or any other page
+    } catch (error) {
+      console.error(error);
+      setError('An error occurred while uploading the ad');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h1>Select a Category</h1>
+      <form onSubmit={handleSubmit}>
+        {error && <p className='error'>{error}</p>}
+        <div>
+          <input
+            type="radio"
+            id="manufacturing"
+            name="category"
+            value="manufacturing"
+            checked={selectedCategory === 'manufacturing'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="manufacturing">Manufacturing</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="technology"
+            name="category"
+            value="technology"
+            checked={selectedCategory === 'technology'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="technology">Technology</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="agriculture"
+            name="category"
+            value="agriculture"
+            checked={selectedCategory === 'agriculture'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="agriculture">Agriculture</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="retail"
+            name="category"
+            value="retail"
+            checked={selectedCategory === 'retail'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="retail">Retail</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="services"
+            name="category"
+            value="services"
+            checked={selectedCategory === 'services'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="services">Services</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="hospitality"
+            name="category"
+            value="hospitality"
+            checked={selectedCategory === 'hospitality'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="hospitality">Hospitality</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="transportionAndLogistics"
+            name="category"
+            value="transportionAndLogistics"
+            checked={selectedCategory === 'transportionAndLogistics'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="transportionAndLogistics">Transportation and Logistics</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="realEstate"
+            name="category"
+            value="realEstate"
+            checked={selectedCategory === 'realEstate'}
+            onChange={handleCategoryChange}
+          />
+          <label htmlFor="realEstate">Real Estate</label>
+        </div>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Submitting...' : 'Submit'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export default Categories;

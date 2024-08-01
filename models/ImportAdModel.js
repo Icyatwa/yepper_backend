@@ -1,12 +1,23 @@
 const mongoose = require('mongoose');
 
-const ImportAdSchema = new mongoose.Schema({
+const importAdSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   imageUrl: { type: String },
   pdfUrl: { type: String },
-  videoUrl: { type: String }
-}, { timestamps: true });
+  videoUrl: { type: String },
 
-const ImportAd = mongoose.model('ImportAd', ImportAdSchema);
+  manufacturing: { type: Boolean },
+  technology: { type: Boolean },
+  agriculture: { type: Boolean },
+  retail: { type: Boolean },
+  services: { type: Boolean },
+  hospitality: { type: Boolean },
+  transportationAndLogistics: { type: Boolean },
+  realEstate: { type: Boolean },
+  
+  businessName: { type: String, required: true },
+  businessLocation: { type: String, required: true },
+  adDescription: { type: String, required: true }
+});
 
-module.exports = ImportAd;
+module.exports = mongoose.model('ImportAd', importAdSchema);

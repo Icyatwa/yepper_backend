@@ -1,9 +1,9 @@
-// ImportAdRoutes.js
 const express = require('express');
 const router = express.Router();
-const ImportAdController = require('../controllers/ImportAdController');
+const importAdController = require('../controllers/ImportAdController');
 
-router.post('/', ImportAdController.createImportAd);
-router.get('/', ImportAdController.getAllAds);
+router.post('/', importAdController.createImportAd);
+router.get('/', importAdController.getAllAds);
+router.get('/ads/:userId', importAdController.getAdsByUserId);
 
 module.exports = router;

@@ -22,7 +22,16 @@ const upload = multer({
 
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { 
+      userId,
+      businessName,
+      businessLocation,
+      adDescription,
+    } = req.body;
+    
+    const categories = ['manufacturing', 'technology', 'agriculture', 'retail', 'services', 'hospitality', 'transportationAndLogistics', 'realEstate'];
+    const selectedCategory = categories.find(category => req.body[category]);
+
     let imageUrl = '';
     let pdfUrl = '';
     let videoUrl = '';
@@ -50,7 +59,11 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       userId,
       imageUrl,
       pdfUrl,
-      videoUrl
+      videoUrl,
+      [selectedCategory]: selectedCategory,
+      businessName,
+      businessLocation,
+      adDescription,
     });
 
     const savedImportAd = await newImportAd.save();
@@ -66,7 +79,21 @@ exports.getAllAds = async (req, res) => {
     const ads = await ImportAd.find();
     res.status(200).json(ads);
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching ads:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+exports.getAdsByUserId = async (req, res) => {
+  const userId = req.params.userId;
+  try { 
+    const ad = await ImportAd.find({ userId });
+    if (!ad) {
+      return res.status(404).json({ message: 'Ad not found' });
+    }
+    res.status(200).json(ad);
+  } catch (error) {
+    console.error('Error fetching ad by user ID:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
