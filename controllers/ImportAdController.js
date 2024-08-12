@@ -97,3 +97,19 @@ exports.getAdsByUserId = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+exports.getAdsByUserIdWithClicks = async (req, res) => {
+  const userId = req.params.userId;
+  try {
+    const ads = await ImportAd.find({ userId });
+    for (const ad of ads) {
+      const clicks = await AdClick.find({ adId: ad._id }).exec();
+      ad.clicks = clicks.length;
+      ad.websites = [...new Set(clicks.map(click => click.website))]; // Unique websites
+    }
+    res.status(200).json(ads);
+  } catch (error) {
+    console.error('Error fetching ads with clicks:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
