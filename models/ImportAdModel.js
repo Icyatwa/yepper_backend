@@ -1,3 +1,4 @@
+// models/ImportAdModel.js
 const mongoose = require('mongoose');
 
 const importAdSchema = new mongoose.Schema({
@@ -14,10 +15,12 @@ const importAdSchema = new mongoose.Schema({
   hospitality: { type: Boolean },
   transportationAndLogistics: { type: Boolean },
   realEstate: { type: Boolean },
-  
+
   businessName: { type: String, required: true },
   businessLocation: { type: String, required: true },
-  adDescription: { type: String, required: true }
+  adDescription: { type: String, required: true },
+  
+  templateType: { type: String, required: true }, // Added field for template type
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);

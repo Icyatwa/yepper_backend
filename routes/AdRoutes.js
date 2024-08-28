@@ -1,9 +1,8 @@
-// routes/AdRoutes.js
+// AdRoutes.js
 const express = require('express');
 const router = express.Router();
-const adController = require('../controllers/AdController');
+const adEmbedController = require('../controllers/AdEmbedController');
 
-router.get('/random', adController.getRandomAd);
-router.get('/track/click/:adId', adController.trackClick);
+router.get('/embed/:adId', adEmbedController.getAdEmbed); // New route for embed code
 
 module.exports = router;

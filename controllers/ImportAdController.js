@@ -1,3 +1,4 @@
+// ImportAdController.js
 const ImportAd = require('../models/ImportAdModel');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -22,11 +23,12 @@ const upload = multer({
 
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
-    const { 
+    const {
       userId,
       businessName,
       businessLocation,
       adDescription,
+      templateType, // Added templateType to destructure
     } = req.body;
     
     const categories = ['manufacturing', 'technology', 'agriculture', 'retail', 'services', 'hospitality', 'transportationAndLogistics', 'realEstate'];
@@ -64,6 +66,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       businessName,
       businessLocation,
       adDescription,
+      templateType, // Added templateType
     });
 
     const savedImportAd = await newImportAd.save();
@@ -73,6 +76,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
+
 
 exports.getAllAds = async (req, res) => {
   try {
@@ -113,3 +117,4 @@ exports.getAdsByUserIdWithClicks = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
