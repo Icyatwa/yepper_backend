@@ -5,6 +5,7 @@ const importAdController = require('../controllers/ImportAdController');
 
 router.post('/', importAdController.createImportAd);
 router.get('/', importAdController.getAllAds);
+router.get('/:id', importAdController.getAdById);
 router.get('/ads/:userId', importAdController.getAdsByUserId);
 router.get('/ads/:userId/with-clicks', importAdController.getAdsByUserIdWithClicks);
 

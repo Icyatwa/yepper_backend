@@ -102,59 +102,100 @@ exports.getAdsByUserId = async (req, res) => {
   }
 };
 
-exports.getAdsByUserIdWithClicks = async (req, res) => {
-  const userId = req.params.userId;
-  try {
-    const ads = await ImportAd.find({ userId });
-    for (const ad of ads) {
-      const clicks = await AdClick.find({ adId: ad._id }).exec();
-      ad.clicks = clicks.length;
-      ad.websites = [...new Set(clicks.map(click => click.website))]; // Unique websites
+// ImportAdRoutes.js
+const express = require('express');
+const router = express.Router();
+const importAdController = require('../controllers/ImportAdController');
+
+router.post('/', importAdController.createImportAd);
+router.get('/', importAdController.getAllAds);
+router.get('/ads/:userId', importAdController.getAdsByUserId);
+router.get('/ads/:userId/with-clicks', importAdController.getAdsByUserIdWithClicks);
+
+module.exports = router;
+
+// TemplateSelection.js
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import './template.css';
+
+const TemplateSelection = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { file, userId, businessName, businessLocation, adDescription, selectedCategory } = location.state || {};
+
+  const [templateType, setSelectedTemplate] = useState('');
+
+  const handleTemplateChange = (e) => {
+    setSelectedTemplate(e.target.value);
+  };
+
+  const handleNext = (e) => {
+    e.preventDefault();
+    if (!templateType) {
+      alert('Please select a template');
+      return;
     }
-    res.status(200).json(ads);
-  } catch (error) {
-    console.error('Error fetching ads with clicks:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
+
+    navigate('/ad-preview', {
+      state: {
+        file,
+        userId,
+        businessName,
+        businessLocation,
+        adDescription,
+        selectedCategory,
+        templateType,
+      },
+    });
+  };
+
+  return (
+    <div className="template-selection">
+      <h1>Select an Ad Template</h1>
+      <form onSubmit={handleNext}>
+        <div>
+          <input
+            type="radio"
+            id="banner"
+            name="template"
+            value="banner"
+            checked={templateType === 'banner'}
+            onChange={handleTemplateChange}
+          />
+          <label htmlFor="banner">Banner</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="popup"
+            name="template"
+            value="popup"
+            checked={templateType === 'popup'}
+            onChange={handleTemplateChange}
+          />
+          <label htmlFor="popup">Pop-up</label>
+        </div>
+        <div>
+          <input
+            type="radio"
+            id="popdown"
+            name="template"
+            value="popdown"
+            checked={templateType === 'popdown'}
+            onChange={handleTemplateChange}
+          />
+          <label htmlFor="popdown">Pop-down</label>
+        </div>
+        <button type="submit">Next: Preview Ad</button>
+      </form>
+    </div>
+  );
 };
 
+export default TemplateSelection;
 
-// server.js
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/database');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
-const importAdRoutes = require('./routes/ImportAdRoutes');
-const adRoutes = require('./routes/AdRoutes');
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use('/api/importAds', importAdRoutes);
-app.use('/api/ads', adRoutes);
-
-const server = http.createServer(app);
-const io = socketIo(server);
-
-module.exports.io = io;
-connectDB()
-  .then(() => {
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.log(error);
-  });
-
-// AdPreview.js
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -168,6 +209,7 @@ const AdPreview = () => {
   const [adContent, setAdContent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const reader = new FileReader();
@@ -175,9 +217,19 @@ const AdPreview = () => {
     reader.readAsDataURL(file);
   }, [file]);
 
+  useEffect(() => {
+    if (templateType === 'pop-up') {
+      const interval = setInterval(() => {
+        setIsVisible((prev) => !prev);
+      }, 2000); // Toggle visibility every 2 seconds
+      return () => clearInterval(interval); // Clear interval on component unmount
+    } else {
+      setIsVisible(true); // Show ad without interval for other templates
+    }
+  }, [templateType]);
+
   const handlePublish = async (e) => {
-    // Here you'd call the backend to generate the API and save the ad details.
-    // For now, we'll just navigate to the API Display page.
+    setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('userId', userId);
@@ -206,8 +258,19 @@ const AdPreview = () => {
     <div className="ad-preview">
       <h1>Preview Your Ad</h1>
       <div className={`ad-template ${templateType}`}>
-        {adContent && <img src={adContent} alt="Ad" />}
-        <p>{adDescription}</p>
+        {templateType === 'pop-up' ? (
+          isVisible && (
+            <div className="pop-up-container">
+              {adContent && <img src={adContent} alt="Ad" />}
+              <p>{adDescription}</p>
+            </div>
+          )
+        ) : (
+          <div className={templateType}>
+            {adContent && <img src={adContent} alt="Ad" />}
+            <p>{adDescription}</p>
+          </div>
+        )}
       </div>
       <button onClick={handlePublish}>Publish Ad</button>
     </div>
@@ -215,5 +278,4 @@ const AdPreview = () => {
 };
 
 export default AdPreview;
-
 

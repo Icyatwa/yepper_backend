@@ -20,7 +20,7 @@ const importAdSchema = new mongoose.Schema({
   businessLocation: { type: String, required: true },
   adDescription: { type: String, required: true },
   
-  templateType: { type: String, required: true }, // Added field for template type
+  templateType: { type: String, required: true },
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);
