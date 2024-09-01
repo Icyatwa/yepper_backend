@@ -69,6 +69,8 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       templateType, // Added templateType
     });
 
+    // const savedImportAd = await newImportAd.save();
+    // res.status(201).json(savedImportAd);
     const savedImportAd = await newImportAd.save();
     res.status(201).json(savedImportAd);
   } catch (error) {
@@ -76,6 +78,35 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
+
+// exports.getAdById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const ad = await ImportAd.findById(id);
+
+//     if (!ad) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
+
+//     const template = `
+//       <div class="${ad.templateType}">
+//         ${ad.imageUrl ? `<img src="${ad.imageUrl}" alt="Ad Image"/>` : ''}
+//         ${ad.pdfUrl ? `<a href="${ad.pdfUrl}" target="_blank">View PDF</a>` : ''}
+//         ${ad.videoUrl ? `<video controls src="${ad.videoUrl}"></video>` : ''}
+//         <p>${ad.adDescription}</p>
+//       </div>
+//       <style>
+//         /* Include the CSS styles for the templates */
+//         ${generateTemplateStyles(ad.templateType)}
+//       </style>
+//     `;
+
+//     res.send(template);
+//   } catch (error) {
+//     console.error('MongoDB Error:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
 
 exports.getAdById = async (req, res) => {
   try {
@@ -86,25 +117,32 @@ exports.getAdById = async (req, res) => {
       return res.status(404).json({ message: 'Ad not found' });
     }
 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;  // Get the base URL of the server
+
     const template = `
       <div class="${ad.templateType}">
-        ${ad.imageUrl ? `<img src="${ad.imageUrl}" alt="Ad Image"/>` : ''}
-        ${ad.pdfUrl ? `<a href="${ad.pdfUrl}" target="_blank">View PDF</a>` : ''}
-        ${ad.videoUrl ? `<video controls src="${ad.videoUrl}"></video>` : ''}
+        ${ad.imageUrl ? `<img src="${baseUrl}${ad.imageUrl}" alt="Ad Image"/>` : ''}
+        ${ad.pdfUrl ? `<a href="${baseUrl}${ad.pdfUrl}" target="_blank">View PDF</a>` : ''}
+        ${ad.videoUrl ? `<video controls src="${baseUrl}${ad.videoUrl}"></video>` : ''}
         <p>${ad.adDescription}</p>
       </div>
       <style>
-        /* Include the CSS styles for the templates */
         ${generateTemplateStyles(ad.templateType)}
       </style>
     `;
 
-    res.send(template);
+    const scriptContent = `
+      document.write(\`${template}\`);
+    `;
+
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(scriptContent);
   } catch (error) {
     console.error('MongoDB Error:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 function generateTemplateStyles(templateType) {
   switch (templateType) {
