@@ -21,6 +21,62 @@ const upload = multer({
   }
 });
 
+// exports.createImportAd = [upload.single('file'), async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       businessName,
+//       businessLocation,
+//       adDescription,
+//       templateType, // Added templateType to destructure
+//     } = req.body;
+    
+//     const categories = ['manufacturing', 'technology', 'agriculture', 'retail', 'services', 'hospitality', 'transportationAndLogistics', 'realEstate'];
+//     const selectedCategory = categories.find(category => req.body[category]);
+
+//     let imageUrl = '';
+//     let pdfUrl = '';
+//     let videoUrl = '';
+
+//     if (req.file) {
+//       const fileName = `${Date.now()}-${req.file.originalname}`;
+//       const filePath = path.join(__dirname, '../uploads', fileName);
+
+//       if (req.file.mimetype.startsWith('image')) {
+//         await sharp(req.file.buffer)
+//           .resize(300, 300)
+//           .toFile(filePath);
+//         imageUrl = `/uploads/${fileName}`;
+//       } else {
+//         await fs.promises.writeFile(filePath, req.file.buffer);
+//         if (req.file.mimetype === 'application/pdf') {
+//           pdfUrl = `/uploads/${fileName}`;
+//         } else if (req.file.mimetype.startsWith('video')) {
+//           videoUrl = `/uploads/${fileName}`;
+//         }
+//       }
+//     }
+
+//     const newImportAd = new ImportAd({
+//       userId,
+//       imageUrl,
+//       pdfUrl,
+//       videoUrl,
+//       [selectedCategory]: selectedCategory,
+//       businessName,
+//       businessLocation,
+//       adDescription,
+//       templateType, // Added templateType
+//     });
+
+//     const savedImportAd = await newImportAd.save();
+//     res.status(201).json(savedImportAd);
+//   } catch (error) {
+//     console.error('MongoDB Error:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// }];
+
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
     const {
@@ -28,11 +84,9 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       businessName,
       businessLocation,
       adDescription,
-      templateType, // Added templateType to destructure
+      templateType,
+      categories,  // Expect this array directly from the form data
     } = req.body;
-    
-    const categories = ['manufacturing', 'technology', 'agriculture', 'retail', 'services', 'hospitality', 'transportationAndLogistics', 'realEstate'];
-    const selectedCategory = categories.find(category => req.body[category]);
 
     let imageUrl = '';
     let pdfUrl = '';
@@ -62,11 +116,11 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       imageUrl,
       pdfUrl,
       videoUrl,
-      [selectedCategory]: selectedCategory,
+      categories,  // Save the array of categories directly
       businessName,
       businessLocation,
       adDescription,
-      templateType, // Added templateType
+      templateType,
     });
 
     const savedImportAd = await newImportAd.save();
@@ -76,6 +130,8 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
+
+
 
 exports.getAdById = async (req, res) => {
   try {
