@@ -168,7 +168,6 @@ exports.getAdById = async (req, res) => {
   }
 };
 
-
 function generateTemplateStyles(templateType) {
   switch (templateType) {
     case 'banner':
@@ -312,85 +311,21 @@ exports.getAllAds = async (req, res) => {
   }
 };
 
-exports.getManufacturingAds = async (req, res) => {
-  try {
-    const manufacturingAds = await ImportAd.find({ manufacturing: true });
-    res.status(200).json(manufacturingAds);
-  } catch (error) {
-    console.error('Error fetching manufacturing ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
+exports.getAdByIds = async (req, res) => {
+  const adId = req.params.id;  // Fixing the parameter name
 
-exports.getTechnologyAds = async (req, res) => {
   try {
-    const technologyAds = await ImportAd.find({ technology: true });
-    res.status(200).json(technologyAds);
+      const ad = await ImportAd.findById(adId);
+      if (!ad) {
+          return res.status(404).json({ message: 'Ad not found' });
+      }
+      res.status(200).json(ad);
   } catch (error) {
-    console.error('Error fetching technology ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
   }
-};
+}
 
-exports.getAgricultureAds = async (req, res) => {
-  try {
-    const agricultureAds = await ImportAd.find({ agriculture: true });
-    res.status(200).json(agricultureAds);
-  } catch (error) {
-    console.error('Error fetching agriculture ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-exports.getRetailAds = async (req, res) => {
-  try {
-    const retailAds = await ImportAd.find({ retail: true });
-    res.status(200).json(retailAds);
-  } catch (error) {
-    console.error('Error fetching retail ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-exports.getServicesAds = async (req, res) => {
-  try {
-    const servicesAds = await ImportAd.find({ services: true });
-    res.status(200).json(servicesAds);
-  } catch (error) {
-    console.error('Error fetching services ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-exports.getHospitalityAds = async (req, res) => {
-  try {
-    const hospitalityAds = await ImportAd.find({ hospitality: true });
-    res.status(200).json(hospitalityAds);
-  } catch (error) {
-    console.error('Error fetching hospitality ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-exports.getTransportationAndLogisticsAds = async (req, res) => {
-  try {
-    const transportationAndLogisticsAds = await ImportAd.find({ transportationAndLogistics: true });
-    res.status(200).json(transportationAndLogisticsAds);
-  } catch (error) {
-    console.error('Error fetching transportationAndLogistics ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-exports.getRealEstateAds = async (req, res) => {
-  try {
-    const realEstateAds = await ImportAd.find({ realEstate: true });
-    res.status(200).json(realEstateAds);
-  } catch (error) {
-    console.error('Error fetching realEstate ads:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
 
 exports.getAdsByUserId = async (req, res) => {
   const userId = req.params.userId;
@@ -421,4 +356,3 @@ exports.getAdsByUserIdWithClicks = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
