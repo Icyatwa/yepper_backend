@@ -1,335 +1,213 @@
-// ImportAdController.js
-const ImportAd = require('../models/ImportAdModel');
-const multer = require('multer');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
+import React, { useState } from 'react';
+import './style.css';
 
-// Set up multer storage
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    const fileTypes = /jpeg|jpg|png|pdf|mp4/;
-    const mimeType = fileTypes.test(file.mimetype);
-    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+function Banner() {
+  const [copied, setCopied] = useState(false);
 
-    if (mimeType && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Invalid file type'));
-  }
-});
-
-exports.createImportAd = [upload.single('file'), async (req, res) => {
-    try {
-        const {
-        userId,
-        businessName,
-        businessLocation,
-        adDescription,
-        templateType,
-        categories,  // Expect this array directly from the form data
-        } = req.body;
-
-        let imageUrl = '';
-        let pdfUrl = '';
-        let videoUrl = '';
-
-        if (req.file) {
-        const fileName = `${Date.now()}-${req.file.originalname}`;
-        const filePath = path.join(__dirname, '../uploads', fileName);
-
-        if (req.file.mimetype.startsWith('image')) {
-            await sharp(req.file.buffer)
-            .resize(300, 300)
-            .toFile(filePath);
-            imageUrl = `/uploads/${fileName}`;
-        } else {
-            await fs.promises.writeFile(filePath, req.file.buffer);
-            if (req.file.mimetype === 'application/pdf') {
-            pdfUrl = `/uploads/${fileName}`;
-            } else if (req.file.mimetype.startsWith('video')) {
-            videoUrl = `/uploads/${fileName}`;
-            }
-        }
-        }
-
-        const newImportAd = new ImportAd({
-        userId,
-        imageUrl,
-        pdfUrl,
-        videoUrl,
-        categories,  // Save the array of categories directly
-        businessName,
-        businessLocation,
-        adDescription,
-        templateType,
-        });
-
-        const savedImportAd = await newImportAd.save();
-        res.status(201).json(savedImportAd);
-    } catch (error) {
-        console.error('MongoDB Error:', error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-}];
-
-
-exports.getAdById = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const ad = await ImportAd.findById(id);
-  
-      if (!ad) {
-        return res.status(404).json({ message: 'Ad not found' });
-      }
-  
-      const baseUrl = `${req.protocol}://${req.get('host')}`;  // Get the base URL of the server
-  
-      const template = `
-        <div class="${ad.templateType}">
-          ${ad.imageUrl ? `<img src="${baseUrl}${ad.imageUrl}" alt="Ad Image"/>` : ''}
-          ${ad.pdfUrl ? `<a href="${baseUrl}${ad.pdfUrl}" target="_blank">View PDF</a>` : ''}
-          ${ad.videoUrl ? `<video controls src="${baseUrl}${ad.videoUrl}"></video>` : ''}
-          <p>${ad.adDescription}</p>
-        </div>
-        <style>
-          ${generateTemplateStyles(ad.templateType)}
-        </style>
-      `;
-  
-      const scriptContent = `
-        document.write(\`${template}\`);
-      `;
-  
-      res.setHeader('Content-Type', 'application/javascript');
-      res.send(scriptContent);
-    } catch (error) {
-      console.error('MongoDB Error:', error);
-      res.status(500).json({ message: 'Internal Server Error' });
-    }
+  const handleCopy = () => {
+    navigator.clipboard.writeText('<script src="https://domain.com/ad"></script>');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Hide the "Copied!" message after 2 seconds
   };
-  
-  function generateTemplateStyles(templateType) {
-    switch (templateType) {
-      case 'banner':
-        return `
-          .banner {
-            height: 150px;
-            border: 2px solid #ddd;
-            background-color: #f9f9f9;
-            width: 100%;
-            text-align: center;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          .banner img {
-            max-height: 100px;
-            object-fit: contain;
-          }
-        `;
-      case 'pop-up':
-        return `
-          .pop-up {
-            width: 400px;
-            height: 300px;
-            border: 2px solid #4caf50;
-            background-color: #e8f5e9;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            text-align: center;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-          }
-          .pop-up img {
-            max-width: 100%;
-            border-radius: 10px;
-            margin-bottom: 15px;
-          }
-          .pop-up p {
-            margin: 0;
-          }
-        `;
-      case 'pop-down':
-        return `
-          .pop-down {
-            height: 150px;
-            border: 2px solid #f44336;
-            background-color: #ffebee;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-            padding: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          .pop-down img {
-            max-height: 100px;
-            object-fit: contain;
-            margin-bottom: 10px;
-          }
-        `;
-      case 'sidebar':
-        return `
-          .sidebar {
-            width: 300px;
-            height: 600px;
-            border: 2px solid #3f51b5;
-            background-color: #e8eaf6;
-            position: fixed;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-          }
-          .sidebar img {
-            max-width: 100%;
-            border-radius: 10px;
-            margin-bottom: 15px;
-          }
-        `;
-      case 'fullscreen':
-        return `
-          .fullscreen {
-            width: 100%;
-            height: 100vh;
-            color: #fff;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            text-align: center;
-            overflow: hidden;
-          }
-          .fullscreen img {
-            max-width: 100%;
-            max-height: 80%;
-            border-radius: 10px;
-            margin-bottom: 15px;
-          }
-          .fullscreen p {
-            margin: 0;
-            font-size: 1.5em;
-          }
-        `;
-      default:
-        return '';
-    }
-  }
 
-exports.getAllAds = async (req, res) => {
-    try {
-        const ads = await ImportAd.find();
-        res.status(200).json(ads);
-    } catch (error) {
-        console.error('Error fetching ads:', error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-};
+  return (
+    <div className='mail-container'>
+      <div className='all-apis'>
+        <div className='api'>
+          <div className='left'>
+            <h3>Banner</h3>
+            <p>
+              A banner ad's appearance on a website or app can be static, scrolling, 
+              or pop-up, impacting user attention and interaction.
+            </p>
+          </div>
+          <div className='right'>
+            <div className='code-ctn'>
+              <div className='head'>
+                <label>Page</label>
+                <div className='copy-container'>
+                  {copied && <span className='copied-message'>Copied!</span>}
+                  <img 
+                    src='https://cdn-icons-png.flaticon.com/128/1828/1828249.png' 
+                    alt='Copy Icon' 
+                    onClick={handleCopy}
+                    className='copy-icon'
+                  />
+                </div>
+              </div>
+              <div className='codes'>
+                <code>&lt;script src="https://domain.com/ad"&gt;&lt;/script&gt;</code>
+              </div>
+            </div>
+          </div>
+        </div>
 
-exports.getAdByIds = async (req, res) => {
-    const adId = req.params.AdId;
-  
-    try{
-      const ad = await ImportAd.findById(adId);
-      if(!ad){
-        return res.status(404).json({message: 'Ad not found'});
-      }
-      res.status(200).json(ad);
-    }catch(error){
-      console.error(error);
-      res.status(500).json({message: 'Internal server error'});
-    }
+      </div>
+    </div>
+  );
 }
 
+export default Banner;
 
-// AdTestAd.js
+
+.all-apis {
+  font-family: 'Poppins', sans-serif;
+  color: black;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  margin: 50px auto;
+}
+
+.all-apis .api {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.all-apis .left {
+  width: 60%;
+}
+
+.all-apis .right {
+  width: 40%;
+}
+
+.all-apis h3 {
+  font-size: 24px;
+  font-weight: 600;
+  color: black;
+  margin-bottom: 15px;
+}
+
+.all-apis p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #555;
+}
+
+.all-apis .code-ctn {
+  background: #2d3748;
+  color: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.all-apis .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #4a5568;
+  margin-bottom: 10px;
+}
+
+.all-apis .copy-container {
+  position: relative;
+}
+
+.all-apis .copy-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.all-apis .copy-icon:hover {
+  transform: scale(1.1);
+}
+
+.all-apis .copied-message {
+  position: absolute;
+  top: -30px;
+  right: 0;
+  background: #38a169;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.all-apis .copy-container:hover .copied-message {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.all-apis .codes {
+  font-family: 'Courier New', Courier, monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.all-apis .api:hover .code-ctn {
+  transform: translateY(-5px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
+
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/adTestAd.css';
+import '../styles/adTestApi.css'
 
-function AdTestAd() {
-    const { adId } = useParams();  // Corrected destructuring
+const AdTestApi = () => {
+    const { adId } = useParams();  // Get the adId from the route parameters
     const [ad, setAd] = useState({});
-    const [activeTemplate, setActiveTemplate] = useState('Banner');
+    const [embedCode, setEmbedCode] = useState('');  // Initialize embedCode as an empty string
 
     useEffect(() => {
         const fetchAd = async () => {
             try {
                 const response = await axios.get(`http://localhost:5000/api/importAds/ad/${adId}`);
-                console.log('Fetched ad details:', response.data); // Check the response data here
-                if (response.data) {
-                    setAd(response.data);
+                const adData = response.data;
+
+                if (adData) {
+                    setAd(adData);
+
+                    const apiUrl = `http://localhost:5000/api/importAds/${adData._id}`;
+                    const code = `
+                        <script type="text/javascript">
+                            (function() {
+                                var script = document.createElement('script');
+                                script.src = '${apiUrl}';
+                                script.async = true;
+                                document.body.appendChild(script);
+                            })();
+                        </script>
+                    `;
+                    // Set the generated embed code in state
+                    setEmbedCode(code);
                 }
             } catch (error) {
                 console.error('Error fetching ad:', error);
             }
         };
-        fetchAd();
-    }, [adId]);
-    
 
-    const templates = [
-        { name: 'Banner', src: ad.imageUrl || 'fallback-banner-url.jpg' },
-        { name: 'Interstitial', src: ad.imageUrl || 'fallback-banner-url.jpg' },
-        { name: 'Native', src: ad.imageUrl || 'fallback-banner-url.jpg' },
-        { name: 'Video', src: ad.imageUrl || 'fallback-banner-url.jpg' },
-        { name: 'Pop up', src: ad.imageUrl || 'fallback-banner-url.jpg' },
-        { name: 'Pop down', src: ad.imageUrl || 'fallback-banner-url.jpg' }
-    ];
+        fetchAd();
+    }, [adId]);  // Dependency array to trigger the effect when adId changes
 
     return (
-        <div className='adTestAd'>
-            <h1>{ad.businessName}</h1>
-            <div className='upper'>
-                <img src={templates.find(template => template.name === activeTemplate).src} alt={activeTemplate} />
-            </div>
-
-            <div className='middle'>
-                {templates.map((template) => (
-                    <div
-                        key={template.name}
-                        className={`template-container ${template.name === activeTemplate ? 'active' : ''}`}
-                        onClick={() => setActiveTemplate(template.name)}
-                    >
-                        <div className='template'>
-                            <img src={template.src} alt={template.name} />
-                            <label>{template.name}</label>
-                        </div>
-                        <div className='line'></div>
-                    </div>
-                ))}
-            </div>
+        <div>
+            <h1>Your Ad Embed Code</h1>
+            <p>Copy and paste the following code into your website's HTML where you want the ad to appear:</p>
+            <pre>
+                <code>{embedCode}</code>
+            </pre>
         </div>
     );
-}
+};
 
-export default AdTestAd;
+export default AdTestApi;
+design this page AdTestApi by taking an idea from Banner's css, but they should not look the same for AdTestApi use only two colors "white color" and "black color"
