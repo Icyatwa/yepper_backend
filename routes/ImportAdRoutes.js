@@ -6,6 +6,9 @@ const importAdController = require('../controllers/ImportAdController');
 router.post('/', importAdController.createImportAd);
 router.get('/', importAdController.getAllAds);
 
+router.post('/initiate', importAdController.initiatePayment);
+router.get('/callback', importAdController.paymentCallback);
+
 router.get('/:id', importAdController.getAdById);
 router.get('/ad/:id', importAdController.getAdByIds);
 router.get('/ads/:userId', importAdController.getAdsByUserId);

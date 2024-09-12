@@ -1,213 +1,183 @@
-import React, { useState } from 'react';
-import './style.css';
+// .env
+MONGODB_URI = mongodb+srv://yepper_test:lolop0788@cluster0.s1wt1at.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+PORT = 5000
+REACT_APP_CLERK_PUBLISHABLE_KEY = pk_test_aHVnZS1tdWRmaXNoLTQyLmNsZXJrLmFjY291bnRzLmRldiQ
+FLW_PUBLIC_KEY = FLWPUBK-112026cd95260f8d5a150e51ce489285-X
+FLW_SECRET_KEY = FLWSECK-e45ef8d6e3bdc4db51175e2f7e5f9031-191e840d2c5vt-X
+FLW_ENCRYPTION_KEY = e45ef8d6e3bd8c214e1eb5c3
 
-function Banner() {
-  const [copied, setCopied] = useState(false);
+// ImportAdModel.js
+const mongoose = require('mongoose');
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText('<script src="https://domain.com/ad"></script>');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Hide the "Copied!" message after 2 seconds
-  };
+const importAdSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  businessName: { type: String, required: true },
+  businessLocation: { type: String },
+  adDescription: { type: String },
+  imageUrl: { type: String },
+  pdfUrl: { type: String },
+  videoUrl: { type: String },
+  templateType: { type: String},
+  categories: [{ type: String }],
+  paymentStatus: { type: String, default: 'pending' },  // New field for payment status
+  paymentRef: { type: String },  // New field to store payment reference from Flutterwave
+  amount: { type: Number },  // New field for payment amount
+  email: { type: String },  // Email is now optional
+  phoneNumber: { type: String },  // New field for phone number
+}, { timestamps: true });
 
-  return (
-    <div className='mail-container'>
-      <div className='all-apis'>
-        <div className='api'>
-          <div className='left'>
-            <h3>Banner</h3>
-            <p>
-              A banner ad's appearance on a website or app can be static, scrolling, 
-              or pop-up, impacting user attention and interaction.
-            </p>
-          </div>
-          <div className='right'>
-            <div className='code-ctn'>
-              <div className='head'>
-                <label>Page</label>
-                <div className='copy-container'>
-                  {copied && <span className='copied-message'>Copied!</span>}
-                  <img 
-                    src='https://cdn-icons-png.flaticon.com/128/1828/1828249.png' 
-                    alt='Copy Icon' 
-                    onClick={handleCopy}
-                    className='copy-icon'
-                  />
-                </div>
-              </div>
-              <div className='codes'>
-                <code>&lt;script src="https://domain.com/ad"&gt;&lt;/script&gt;</code>
-              </div>
-            </div>
-          </div>
-        </div>
+module.exports = mongoose.model('ImportAd', importAdSchema);
 
-      </div>
-    </div>
-  );
-}
+const Flutterwave = require('flutterwave-node-v3');
+const ImportAd = require('../models/ImportAdModel');
+const multer = require('multer');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
 
-export default Banner;
+// Initialize Flutterwave
+const flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
+// Multer storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|pdf|mp4/;
+    const mimeType = fileTypes.test(file.mimetype);
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimeType && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type'));
+  }
+});
 
-.all-apis {
-  font-family: 'Poppins', sans-serif;
-  color: black;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  margin: 50px auto;
-}
+exports.createImportAd = [upload.single('file'), async (req, res) => {
+  try {
+    const { userId, businessName, businessLocation, adDescription, templateType, categories } = req.body;
 
-.all-apis .api {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 30px;
-  margin-bottom: 30px;
-}
+    let imageUrl = '';
+    let pdfUrl = '';
+    let videoUrl = '';
 
-.all-apis .left {
-  width: 60%;
-}
+    if (req.file) {
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const filePath = path.join(__dirname, '../uploads', fileName);
 
-.all-apis .right {
-  width: 40%;
-}
+      if (req.file.mimetype.startsWith('image')) {
+        await sharp(req.file.buffer)
+          .resize(300, 300)
+          .toFile(filePath);
+        imageUrl = `/uploads/${fileName}`;
+      } else {
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        if (req.file.mimetype === 'application/pdf') {
+          pdfUrl = `/uploads/${fileName}`;
+        } else if (req.file.mimetype.startsWith('video')) {
+          videoUrl = `/uploads/${fileName}`;
+        }
+      }
+    }
 
-.all-apis h3 {
-  font-size: 24px;
-  font-weight: 600;
-  color: black;
-  margin-bottom: 15px;
-}
+    // Create an ad object but do not save it yet
+    req.adData = {
+      userId,
+      businessName,
+      businessLocation,
+      adDescription,
+      templateType,
+      categories,
+      imageUrl,
+      pdfUrl,
+      videoUrl
+    };
 
-.all-apis p {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #555;
-}
+    // Proceed to initiate payment
+    res.status(200).json({ message: 'Ad prepared successfully, ready for payment' });
+  } catch (error) {
+    console.error('Error preparing ad:', error);
+    res.status(500).json({ message: 'Error preparing ad' });
+  }
+}];
 
-.all-apis .code-ctn {
-  background: #2d3748;
-  color: #ffffff;
-  padding: 20px;
-  border-radius: 10px;
-  position: relative;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
+exports.initiatePayment = async (req, res) => {
+  try {
+    const { userId, businessName, businessLocation, adDescription, templateType, categories, amount, currency, email, phoneNumber } = req.body;
 
-.all-apis .head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #4a5568;
-  margin-bottom: 10px;
-}
+    if (!businessName) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
 
-.all-apis .copy-container {
-  position: relative;
-}
+    const tx_ref = 'LEDOST-' + Date.now(); // Generate a transaction reference
 
-.all-apis .copy-icon {
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
+    // Prepare payment payload for Flutterwave
+    const paymentPayload = {
+      tx_ref: tx_ref,
+      amount: amount,
+      currency: currency,
+      redirect_url: 'http://localhost:5000/api/importAds/callback', // This URL handles payment status
+      customer: {
+        email: email || 'no-email@example.com',
+        phonenumber: phoneNumber,
+        name: businessName
+      },
+      payment_options: 'card,banktransfer', // Payment options available
+      customizations: {
+        title: 'Ad Payment',
+        description: 'Payment for your advertisement placement',
+      }
+    };
 
-.all-apis .copy-icon:hover {
-  transform: scale(1.1);
-}
+    // Initialize the payment transaction
+    const paymentResponse = await flw.Payment.create(paymentPayload);
 
-.all-apis .copied-message {
-  position: absolute;
-  top: -30px;
-  right: 0;
-  background: #38a169;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-size: 12px;
-  font-weight: bold;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
+    if (paymentResponse && paymentResponse.data && paymentResponse.data.link) {
+      // Store the ad data temporarily in the request for the callback
+      req.body.paymentRef = tx_ref;
+      req.body.paymentStatus = 'pending';
 
-.all-apis .copy-container:hover .copied-message {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.all-apis .codes {
-  font-family: 'Courier New', Courier, monospace;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
-  border-radius: 5px;
-  font-size: 14px;
-  color: #e2e8f0;
-}
-
-.all-apis .api:hover .code-ctn {
-  transform: translateY(-5px);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-}
-
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
-import '../styles/adTestApi.css'
-
-const AdTestApi = () => {
-    const { adId } = useParams();  // Get the adId from the route parameters
-    const [ad, setAd] = useState({});
-    const [embedCode, setEmbedCode] = useState('');  // Initialize embedCode as an empty string
-
-    useEffect(() => {
-        const fetchAd = async () => {
-            try {
-                const response = await axios.get(`http://localhost:5000/api/importAds/ad/${adId}`);
-                const adData = response.data;
-
-                if (adData) {
-                    setAd(adData);
-
-                    const apiUrl = `http://localhost:5000/api/importAds/${adData._id}`;
-                    const code = `
-                        <script type="text/javascript">
-                            (function() {
-                                var script = document.createElement('script');
-                                script.src = '${apiUrl}';
-                                script.async = true;
-                                document.body.appendChild(script);
-                            })();
-                        </script>
-                    `;
-                    // Set the generated embed code in state
-                    setEmbedCode(code);
-                }
-            } catch (error) {
-                console.error('Error fetching ad:', error);
-            }
-        };
-
-        fetchAd();
-    }, [adId]);  // Dependency array to trigger the effect when adId changes
-
-    return (
-        <div>
-            <h1>Your Ad Embed Code</h1>
-            <p>Copy and paste the following code into your website's HTML where you want the ad to appear:</p>
-            <pre>
-                <code>{embedCode}</code>
-            </pre>
-        </div>
-    );
+      // Send the payment link to the client
+      res.status(200).json({ paymentLink: paymentResponse.data.link });
+    } else {
+      res.status(500).json({ message: 'Payment initiation failed' });
+    }
+  } catch (error) {
+    console.error('Error initiating payment:', error);
+    res.status(500).json({ message: 'Error initiating payment' });
+  }
 };
 
-export default AdTestApi;
-design this page AdTestApi by taking an idea from Banner's css, but they should not look the same for AdTestApi use only two colors "white color" and "black color"
+// Payment callback to verify the status
+exports.paymentCallback = async (req, res) => {
+  try {
+    const tx_ref = req.query.tx_ref;
+    const transactionId = req.query.transaction_id;
+
+    // Verify the payment status with Flutterwave
+    const paymentStatus = await flw.Transaction.verify({ id: transactionId });
+
+    if (paymentStatus.data.status === 'successful') {
+      // Save the ad data in the database if payment is successful
+      const newAd = new ImportAd({
+        ...req.adData, // Use the ad data stored in the request
+        paymentStatus: 'successful'
+      });
+
+      await newAd.save();
+
+      // Redirect to a success page or send a success response
+      res.redirect('/success-page');
+    } else {
+      // Handle payment failure
+      res.redirect('/error-page');
+    }
+  } catch (error) {
+    console.error('Error in payment callback:', error);
+    res.redirect('/error-page');
+  }
+};
+
+
+Server is running on port 5000
+Error initiating payment: TypeError: Cannot read properties of undefined (reading 'initialize')
