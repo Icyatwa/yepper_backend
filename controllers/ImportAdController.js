@@ -1,10 +1,9 @@
-// ImportAdController.js
 const ImportAd = require('../models/ImportAdModel');
-const Website = require('../models/WebsiteModel');
 const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 
 // Set up multer storage
 const storage = multer.memoryStorage();
@@ -22,17 +21,34 @@ const upload = multer({
   }
 });
 
+const flutterwaveSecretKey = 'FLWSECK-a6fb83933d99ce314afbbae488584e03-191e16e049avt-X'; // Use your actual secret key here
+
+const verifyPayment = async (transactionId) => {
+  const url = `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`;
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${flutterwaveSecretKey}`,
+      },
+    });
+    return response.data.status === 'success'; // Confirm payment was successful
+  } catch (error) {
+    console.error('Flutterwave Payment Verification Error:', error);
+    return false;
+  }
+};
+
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
-    const {
-      userId,
-      businessName,
-      businessLocation,
-      adDescription,
-      templateType,
-      categories,  // Expect this array directly from the form data
-    } = req.body;
+    const { userId, businessName, businessLocation, adDescription, templateType, categories, transactionId } = req.body;
 
+    // Step 1: Verify payment
+    const paymentVerified = await verifyPayment(transactionId);
+    if (!paymentVerified) {
+      return res.status(400).json({ message: 'Payment verification failed, ad not stored' });
+    }
+
+    // Step 2: Process file uploads
     let imageUrl = '';
     let pdfUrl = '';
     let videoUrl = '';
@@ -56,12 +72,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       }
     }
 
+    // Step 3: Save ad data to MongoDB after payment is successful
     const newImportAd = new ImportAd({
       userId,
       imageUrl,
       pdfUrl,
       videoUrl,
-      categories,  // Save the array of categories directly
+      categories,
       businessName,
       businessLocation,
       adDescription,
@@ -69,7 +86,8 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     });
 
     const savedImportAd = await newImportAd.save();
-    res.status(201).json(savedImportAd);
+
+    res.status(201).json({ message: 'Ad created successfully', adId: savedImportAd._id });
   } catch (error) {
     console.error('MongoDB Error:', error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -84,8 +102,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
 //       businessLocation,
 //       adDescription,
 //       templateType,
-//       categories,
-//       websiteIds  // Expect this to be an array of website IDs
+//       categories,  // Expect this array directly from the form data
 //     } = req.body;
 
 //     let imageUrl = '';
@@ -116,12 +133,11 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
 //       imageUrl,
 //       pdfUrl,
 //       videoUrl,
-//       categories,
+//       categories,  // Save the array of categories directly
 //       businessName,
 //       businessLocation,
 //       adDescription,
 //       templateType,
-//       websites: websiteIds  // Save the website references here
 //     });
 
 //     const savedImportAd = await newImportAd.save();
@@ -380,7 +396,6 @@ exports.getAdByIds = async (req, res) => {
       res.status(500).json({ message: 'Internal server error' });
   }
 }
-
 
 exports.getAdsByUserId = async (req, res) => {
   const userId = req.params.userId;

@@ -12,6 +12,7 @@ const importAdSchema = new mongoose.Schema({
   businessLocation: { type: String, required: true },
   adDescription: { type: String, required: true },
   templateType: { type: String, required: true },
+  transactionId: [{ type: mongoose.Schema.Types.ObjectId}],
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);

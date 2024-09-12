@@ -5,6 +5,7 @@ const connectDB = require('./config/database');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const axios = require('axios');
 const importAdRoutes = require('./routes/ImportAdRoutes');
 const requestAdRoutes = require('./routes/RequestAdRoutes');
 const adRoutes = require('./routes/AdRoutes');
@@ -21,6 +22,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/importAds', importAdRoutes);
 app.use('/api/requestAd', requestAdRoutes);
 app.use('/api/ads', adRoutes);
+
+const flutterwavePaymentUrl = 'https://flutterwave.com/pay/uyjicscjpstj?_gl=1%2a1hodxkl%2a_gcl_au%2aMTAxNzY5NjUxMS4xNzI1OTcwOTU4%2a_ga%2aMjA1NTc3ODQzOC4xNzI1OTcwODY0%2a_ga_KQ9NSEMFCF%2aMTcyNTk3MDg2OS4xLjEuMTcyNTk3MDk4OC4xNS4wLjA.https://flutterwave.com/pay/uyjicscjpstj?_gl=1%2a1hodxkl%2a_gcl_au%2aMTAxNzY5NjUxMS4xNzI1OTcwOTU4%2a_ga%2aMjA1NTc3ODQzOC4xNzI1OTcwODY0%2a_ga_KQ9NSEMFCF%2aMTcyNTk3MDg2OS4xLjEuMTcyNTk3MDk4OC4xNS4wLjA';
+
+app.get('/api/pay', (req, res) => {
+  const paymentUrl = 'https://flutterwave.com/pay/uyjicscjpstj?_gl=1%2a1hodxkl%2a_gcl_au%2aMTAxNzY5NjUxMS4xNzI1OTcwOTU4%2a_ga%2aMjA1NTc3ODQzOC4xNzI1OTcwODY0%2a_ga_KQ9NSEMFCF%2aMTcyNTk3MDg2OS4xLjEuMTcyNTk3MDk4OC4xNS4wLjA.https://flutterwave.com/pay/uyjicscjpstj?_gl=1%2a1hodxkl%2a_gcl_au%2aMTAxNzY5NjUxMS4xNzI1OTcwOTU4%2a_ga%2aMjA1NTc3ODQzOC4xNzI1OTcwODY0%2a_ga_KQ9NSEMFCF%2aMTcyNTk3MDg2OS4xLjEuMTcyNTk3MDk4OC4xNS4wLjA';  // Ensure this is correct
+  res.redirect(paymentUrl);  // Redirect to Flutterwave payment page
+});
+
 
 const server = http.createServer(app);
 const io = socketIo(server);
