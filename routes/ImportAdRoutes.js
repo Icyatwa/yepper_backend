@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const importAdController = require('../controllers/ImportAdController');
 
-router.post('/', importAdController.createImportAd);
+// router.post('/', importAdController.createImportAd);
 router.get('/', importAdController.getAllAds);
 
 router.post('/initiate', importAdController.initiatePayment);
