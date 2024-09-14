@@ -62,7 +62,7 @@ exports.initiatePayment = [upload.single('file'), async (req, res) => {
       tx_ref: tx_ref,
       amount: amount,
       currency: currency,
-      redirect_url: 'http://localhost:5000/api/importAds/callback',
+      redirect_url: 'https://yepper-backend.onrender.com/api/importAds/callback',
       customer: {
         email: email || 'no-email@example.com',
         phonenumber: phoneNumber,
