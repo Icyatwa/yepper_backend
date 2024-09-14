@@ -62,7 +62,7 @@ exports.initiatePayment = [upload.single('file'), async (req, res) => {
       tx_ref: tx_ref,
       amount: amount,
       currency: currency,
-      redirect_url: 'https://yepper.vercel.app/',
+      redirect_url: 'http://localhost:5000/api/importAds/callback',
       customer: {
         email: email || 'no-email@example.com',
         phonenumber: phoneNumber,
@@ -112,6 +112,65 @@ exports.initiatePayment = [upload.single('file'), async (req, res) => {
   }
 }];
 
+// exports.paymentCallback = async (req, res) => {
+//   try {
+//     const { tx_ref, transaction_id } = req.query;
+
+//     // Verify the transaction status from Flutterwave
+//     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
+//       headers: {
+//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
+//       }
+//     });
+
+//     const { status } = transactionVerification.data.data;
+
+//     if (status === 'successful') {
+//       // Fetch the adData from temporary storage
+//       const adData = await TemporaryAdData.findOne({ tx_ref });
+
+//       if (adData) {
+//         const { userId, businessName, businessLocation, adDescription, templateType, categories, imageUrl, pdfUrl, videoUrl } = adData;
+
+//         // Save ad data in the database after successful payment
+//         const newAd = new ImportAd({
+//           userId,
+//           imageUrl,
+//           pdfUrl,
+//           videoUrl,
+//           businessName,
+//           businessLocation,
+//           adDescription,
+//           templateType,
+//           categories,
+//           paymentStatus: 'successful',  // Update payment status
+//           paymentRef: tx_ref,
+//           amount: adData.amount,
+//           email: adData.email,
+//           phoneNumber: adData.phoneNumber,
+//         });
+
+//         await newAd.save();
+//          // Save the ad data to the database
+//         console.log('Ad data saved successfully:', newAd);
+
+//         // Remove the temporary ad data
+//         await TemporaryAdData.deleteOne({ tx_ref });
+
+//         res.status(200).json({ message: 'Payment and ad processing successful' });
+//       } else {
+//         res.status(400).json({ message: 'Ad data not found or tx_ref mismatch' });
+//       }
+//     } else {
+//       console.error('Payment failed or incomplete:', status);
+//       res.status(400).json({ message: 'Payment failed or incomplete' });
+//     }
+//   } catch (error) {
+//     console.error('Error processing payment callback:', error);
+//     res.status(500).json({ message: 'Error processing payment callback' });
+//   }
+// };
+
 exports.paymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
@@ -153,10 +212,10 @@ exports.paymentCallback = async (req, res) => {
         await newAd.save();  // Save the ad data to the database
         console.log('Ad data saved successfully:', newAd);
 
-        // Remove the temporary ad data
         await TemporaryAdData.deleteOne({ tx_ref });
 
-        res.status(200).json({ message: 'Payment and ad processing successful' });
+        // Redirect to the frontend page after successful payment
+        return res.redirect('https://yepper.vercel.app/');
       } else {
         res.status(400).json({ message: 'Ad data not found or tx_ref mismatch' });
       }
