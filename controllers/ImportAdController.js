@@ -215,7 +215,7 @@ exports.paymentCallback = async (req, res) => {
         await TemporaryAdData.deleteOne({ tx_ref });
 
         // Redirect to the frontend page after successful payment
-        return res.redirect('https://yepper.vercel.app/');
+        return res.redirect('https://yepper.vercel.app/ad-success');
       } else {
         res.status(400).json({ message: 'Ad data not found or tx_ref mismatch' });
       }
