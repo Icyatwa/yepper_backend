@@ -16,6 +16,7 @@
 
 // module.exports = mongoose.model('ImportAd', importAdSchema);
 
+// importAdSchema.js
 const mongoose = require('mongoose');
 
 const importAdSchema = new mongoose.Schema({

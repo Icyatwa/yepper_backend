@@ -32,28 +32,28 @@
 //       categories,
 //     } = req.body;
 
-//     let imageUrl = '';
-//     let pdfUrl = '';
-//     let videoUrl = '';
+    // let imageUrl = '';
+    // let pdfUrl = '';
+    // let videoUrl = '';
 
-//     if (req.file) {
-//       const fileName = `${Date.now()}-${req.file.originalname}`;
-//       const filePath = path.join(__dirname, '../uploads', fileName);
+    // if (req.file) {
+    //   const fileName = `${Date.now()}-${req.file.originalname}`;
+    //   const filePath = path.join(__dirname, '../uploads', fileName);
 
-//       if (req.file.mimetype.startsWith('image')) {
-//         await sharp(req.file.buffer)
-//           .resize(300, 300)
-//           .toFile(filePath);
-//         imageUrl = `/uploads/${fileName}`;
-//       } else {
-//         await fs.promises.writeFile(filePath, req.file.buffer);
-//         if (req.file.mimetype === 'application/pdf') {
-//           pdfUrl = `/uploads/${fileName}`;
-//         } else if (req.file.mimetype.startsWith('video')) {
-//           videoUrl = `/uploads/${fileName}`;
-//         }
-//       }
-//     }
+    //   if (req.file.mimetype.startsWith('image')) {
+    //     await sharp(req.file.buffer)
+    //       .resize(300, 300)
+    //       .toFile(filePath);
+    //     imageUrl = `/uploads/${fileName}`;
+    //   } else {
+    //     await fs.promises.writeFile(filePath, req.file.buffer);
+    //     if (req.file.mimetype === 'application/pdf') {
+    //       pdfUrl = `/uploads/${fileName}`;
+    //     } else if (req.file.mimetype.startsWith('video')) {
+    //       videoUrl = `/uploads/${fileName}`;
+    //     }
+    //   }
+    // }
 
 //     const newImportAd = new ImportAd({
 //       userId,
@@ -328,18 +328,180 @@ const upload = multer({
   }
 });
 
-// Payment initiation
-exports.initiatePayment = async (req, res) => {
+// exports.initiatePayment = async (req, res) => {
+//   try {
+//     const { userId, businessName, businessLocation, adDescription, templateType, categories, amount, currency, email, phoneNumber } = req.body;
+
+//     const tx_ref = 'LEDOST-' + Date.now();
+
+//     const paymentPayload = {
+//       tx_ref: tx_ref,
+//       amount: amount,
+//       currency: currency,
+//       redirect_url: 'http://localhost:5000/api/importAds/callback', // Add a callback URL
+//       customer: {
+//         email: email || 'no-email@example.com',
+//         phonenumber: phoneNumber,
+//       },
+//       payment_options: 'card,banktransfer',
+//       customizations: {
+//         title: 'Ad Payment',
+//         description: 'Payment for your advertisement',
+//       },
+//     };
+
+//     // Store ad data temporarily in MongoDB
+//     await TemporaryAdData.create({
+//       tx_ref,
+//       userId,
+//       businessName,
+//       businessLocation,
+//       adDescription,
+//       templateType,
+//       categories,
+//       amount,
+//       currency,
+//       email,
+//       phoneNumber,
+//     });
+
+//     const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
+//       headers: {
+//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+//         'Content-Type': 'application/json',
+//       },
+//     });
+
+//     if (response.data && response.data.data && response.data.data.link) {
+//       res.status(200).json({ paymentLink: response.data.data.link });
+//     } else {
+//       console.error('Payment initiation failed:', response.data);
+//       res.status(500).json({ message: 'Payment initiation failed', error: response.data });
+//     }
+//   } catch (error) {
+//     console.error('Error during payment initiation:', error);
+//     res.status(500).json({ message: 'Error during payment initiation' });
+//   }
+// };
+
+// exports.paymentCallback = async (req, res) => {
+//   try {
+//     const { tx_ref, transaction_id } = req.query;
+
+//     // Verify the transaction status from Flutterwave
+//     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
+//       headers: {
+//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
+//       }
+//     });
+
+//     const { status } = transactionVerification.data.data;
+
+//     if (status === 'successful') {
+//       // Fetch the adData from temporary storage
+//       const adData = await TemporaryAdData.findOne({ tx_ref });
+
+//       if (adData) {
+//         const { userId, businessName, businessLocation, adDescription, templateType, categories } = adData;
+
+//         // File processing (if any file was uploaded)
+//         let imageUrl = '';
+//         let pdfUrl = '';
+//         let videoUrl = '';
+
+//         if (req.file) {
+//           const fileName = `${Date.now()}-${req.file.originalname}`;
+//           const filePath = path.join(__dirname, '../uploads', fileName);
+
+//           if (req.file.mimetype.startsWith('image')) {
+//             await sharp(req.file.buffer).resize(300, 300).toFile(filePath);
+//             imageUrl = `/uploads/${fileName}`;
+//           } else {
+//             await fs.promises.writeFile(filePath, req.file.buffer);
+//             if (req.file.mimetype === 'application/pdf') {
+//               pdfUrl = `/uploads/${fileName}`;
+//             } else if (req.file.mimetype.startsWith('video')) {
+//               videoUrl = `/uploads/${fileName}`;
+//             }
+//           }
+//         }
+
+//         // Save ad data in the database after successful payment
+//         const newAd = new ImportAd({
+//           userId,
+//           businessName,
+//           businessLocation,
+//           adDescription,
+//           templateType,
+//           categories,
+//           imageUrl,
+//           pdfUrl,
+//           videoUrl,
+//           paymentStatus: 'successful', // Update payment status
+//           paymentRef: tx_ref,
+//           amount: adData.amount,
+//           email: adData.email,
+//           phoneNumber: adData.phoneNumber,
+//         });
+
+//         await newAd.save(); // Save the ad data to the database
+//         console.log('Ad data saved successfully:', newAd);
+
+//         // Remove the temporary ad data
+//         await TemporaryAdData.deleteOne({ tx_ref });
+
+//         res.status(200).json({ message: 'Payment and ad processing successful' });
+//       } else {
+//         res.status(400).json({ message: 'Ad data not found or tx_ref mismatch' });
+//       }
+//     } else {
+//       console.error('Payment failed or incomplete:', status);
+//       res.status(400).json({ message: 'Payment failed or incomplete' });
+//     }
+//   } catch (error) {
+//     console.error('Error processing payment callback:', error);
+//     res.status(500).json({ message: 'Error processing payment callback' });
+//   }
+// };
+
+exports.initiatePayment = [upload.single('file'), async (req, res) => {
   try {
     const { userId, businessName, businessLocation, adDescription, templateType, categories, amount, currency, email, phoneNumber } = req.body;
 
-    const tx_ref = 'LEDOST-' + Date.now();
+    // Validate required fields
+    if (!userId || !businessName || !amount || !currency || !phoneNumber) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
 
+    let imageUrl = '';
+    let pdfUrl = '';
+    let videoUrl = '';
+
+    if (req.file) {
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const filePath = path.join(__dirname, '../uploads', fileName);
+
+      if (req.file.mimetype.startsWith('image')) {
+        await sharp(req.file.buffer)
+          .resize(300, 300)
+          .toFile(filePath);
+        imageUrl = `/uploads/${fileName}`;
+      } else {
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        if (req.file.mimetype === 'application/pdf') {
+          pdfUrl = `/uploads/${fileName}`;
+        } else if (req.file.mimetype.startsWith('video')) {
+          videoUrl = `/uploads/${fileName}`;
+        }
+      }
+    }
+
+    const tx_ref = 'LEDOST-' + Date.now();
     const paymentPayload = {
       tx_ref: tx_ref,
       amount: amount,
       currency: currency,
-      redirect_url: 'http://localhost:5000/api/importAds/callback', // Add a callback URL
+      redirect_url: 'http://localhost:5000/api/importAds/callback',
       customer: {
         email: email || 'no-email@example.com',
         phonenumber: phoneNumber,
@@ -351,10 +513,13 @@ exports.initiatePayment = async (req, res) => {
       },
     };
 
-    // Store ad data temporarily in MongoDB
+    // Store temporary ad data
     await TemporaryAdData.create({
       tx_ref,
       userId,
+      imageUrl,
+      pdfUrl,
+      videoUrl,
       businessName,
       businessLocation,
       adDescription,
@@ -366,6 +531,7 @@ exports.initiatePayment = async (req, res) => {
       phoneNumber,
     });
 
+    // Call Flutterwave payment initiation
     const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
       headers: {
         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
@@ -383,9 +549,8 @@ exports.initiatePayment = async (req, res) => {
     console.error('Error during payment initiation:', error);
     res.status(500).json({ message: 'Error during payment initiation' });
   }
-};
+}];
 
-// Payment callback handler
 exports.paymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
@@ -404,49 +569,27 @@ exports.paymentCallback = async (req, res) => {
       const adData = await TemporaryAdData.findOne({ tx_ref });
 
       if (adData) {
-        const { userId, businessName, businessLocation, adDescription, templateType, categories } = adData;
-
-        // File processing (if any file was uploaded)
-        let imageUrl = '';
-        let pdfUrl = '';
-        let videoUrl = '';
-
-        if (req.file) {
-          const fileName = `${Date.now()}-${req.file.originalname}`;
-          const filePath = path.join(__dirname, '../uploads', fileName);
-
-          if (req.file.mimetype.startsWith('image')) {
-            await sharp(req.file.buffer).resize(300, 300).toFile(filePath);
-            imageUrl = `/uploads/${fileName}`;
-          } else {
-            await fs.promises.writeFile(filePath, req.file.buffer);
-            if (req.file.mimetype === 'application/pdf') {
-              pdfUrl = `/uploads/${fileName}`;
-            } else if (req.file.mimetype.startsWith('video')) {
-              videoUrl = `/uploads/${fileName}`;
-            }
-          }
-        }
+        const { userId, businessName, businessLocation, adDescription, templateType, categories, imageUrl, pdfUrl, videoUrl } = adData;
 
         // Save ad data in the database after successful payment
         const newAd = new ImportAd({
           userId,
+          imageUrl,
+          pdfUrl,
+          videoUrl,
           businessName,
           businessLocation,
           adDescription,
           templateType,
           categories,
-          imageUrl,
-          pdfUrl,
-          videoUrl,
-          paymentStatus: 'successful', // Update payment status
+          paymentStatus: 'successful',  // Update payment status
           paymentRef: tx_ref,
           amount: adData.amount,
           email: adData.email,
           phoneNumber: adData.phoneNumber,
         });
 
-        await newAd.save(); // Save the ad data to the database
+        await newAd.save();  // Save the ad data to the database
         console.log('Ad data saved successfully:', newAd);
 
         // Remove the temporary ad data
@@ -465,99 +608,6 @@ exports.paymentCallback = async (req, res) => {
     res.status(500).json({ message: 'Error processing payment callback' });
   }
 };
-
-// Initiate payment
-// exports.initiatePayment = async (req, res) => {
-//   try {
-//     const { userId, businessName, businessLocation, adDescription, templateType, categories, amount, currency, email, phoneNumber } = req.body;
-
-//     const tx_ref = 'LEDOST-' + Date.now();
-
-//     // Payment payload for Flutterwave
-//     const paymentPayload = {
-//       tx_ref: tx_ref,
-//       amount: amount,
-//       currency: currency,
-//       redirect_url: 'http://localhost:5000/api/importAds/callback',
-//       customer: {
-//         email: email || 'no-email@example.com',
-//         phonenumber: phoneNumber,
-//       },
-//       payment_options: 'card,banktransfer',
-//       customizations: {
-//         title: 'Ad Payment',
-//         description: 'Payment for your advertisement',
-//       },
-//     };
-
-//     const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
-//       headers: {
-//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-//         'Content-Type': 'application/json',
-//       },
-//     });
-
-//     if (response.data && response.data.data && response.data.data.link) {
-//       req.session.paymentRef = tx_ref;
-//       res.status(200).json({ paymentLink: response.data.data.link });
-
-      
-//       const { file } = req; // Assuming the file is attached in the request
-//       let imageUrl = '';
-//       let pdfUrl = '';
-//       let videoUrl = '';
-
-//       if (file) {
-//         const fileName = `${Date.now()}-${file.originalname}`;
-//         const filePath = path.join(__dirname, '../uploads', fileName);
-
-//         if (file.mimetype.startsWith('image')) {
-//           await sharp(file.buffer).resize(300, 300).toFile(filePath);
-//           imageUrl = `/uploads/${fileName}`;
-//         } else {
-//           await fs.promises.writeFile(filePath, file.buffer);
-//           if (file.mimetype === 'application/pdf') {
-//             pdfUrl = `/uploads/${fileName}`;
-//           } else if (file.mimetype.startsWith('video')) {
-//             videoUrl = `/uploads/${fileName}`;
-//           }
-//         }
-//       }
-
-//       // Save the ad data to the database
-//       const newAd = new ImportAd({
-//         userId,
-//         businessName,
-//         businessLocation,
-//         adDescription,
-//         templateType,
-//         categories,
-//         imageUrl,
-//         pdfUrl,
-//         videoUrl,
-//       });
-
-//       await newAd.save();
-
-//       console.log('Ad data saved successfully:', newAd);
-//     } else {
-//       console.error('Payment initiation failed:', response.data);
-//       res.status(500).json({ message: 'Payment initiation failed', error: response.data });
-//     }
-//   } catch (error) {
-//     // Log the error message returned by Flutterwave
-//     if (error.response && error.response.data) {
-//       console.error('Error from Flutterwave:', error.response.data);
-//       res.status(500).json({ message: 'Error during payment initiation', error: error.response.data });
-//     } else {
-//       console.error('Unknown error during payment initiation:', error);
-//       res.status(500).json({ message: 'Unknown error during payment initiation' });
-//     }
-
-//     // If saving the ad data fails, log an error
-//     console.error('Failed to save ad data to the database:', error);
-//   }
-// };
 
 
 exports.getAdById = async (req, res) => {

@@ -1,3 +1,4 @@
+// TemporaryAdData.js
 const mongoose = require('mongoose');
 
 const temporaryAdDataSchema = new mongoose.Schema({
@@ -6,6 +7,9 @@ const temporaryAdDataSchema = new mongoose.Schema({
   businessName: String,
   businessLocation: String,
   adDescription: String,
+  imageUrl: String,
+  pdfUrl: String,
+  videoUrl: String,
   templateType: String,
   categories: [String],
   amount: Number,
