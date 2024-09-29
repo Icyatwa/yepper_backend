@@ -8,6 +8,7 @@ const path = require('path');
 const axios = require('axios');
 const importAdRoutes = require('./routes/ImportAdRoutes');
 const requestAdRoutes = require('./routes/RequestAdRoutes');
+const websiteRoutes = require('./routes/WebsiteRoutes');
 const adCategoryRoutes = require('./routes/AdCategoryRoutes');
 const adSpaceRoutes = require('./routes/AdSpaceRoutes');
 const apiGeneratorRoutes = require('./routes/ApiGeneratorRoutes');
@@ -23,8 +24,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/importAds', importAdRoutes);
 app.use('/api/requestAd', requestAdRoutes);
-app.use('/api/adCategory', adCategoryRoutes);
-app.use('/api/adSpace', adSpaceRoutes);
+app.use('/api/websites', websiteRoutes);
+app.use('/api/ad-categories', adCategoryRoutes);
+app.use('/api/ad-spaces', adSpaceRoutes);
 app.use('/api/apiGenerator', apiGeneratorRoutes);
 
 const server = http.createServer(app);

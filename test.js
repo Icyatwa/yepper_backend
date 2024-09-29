@@ -1,94 +1,141 @@
-const ImportAd = require('../models/ImportAdModel');
-const multer = require('multer');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
+// WebsiteModel.js
+const mongoose = require('mongoose');
 
-// Set up multer storage
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    const fileTypes = /jpeg|jpg|png|pdf|mp4/;
-    const mimeType = fileTypes.test(file.mimetype);
-    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-
-    if (mimeType && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Invalid file type'));
-  }
+const websiteSchema = new mongoose.Schema({
+  ownerId: { type: String, required: true },
+  websiteName: { type: String, required: true },
+  websiteLink: { type: String, required: true, unique: true },
+  logoUrl: { type: String, required: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
-exports.createImportAd = [upload.single('file'), async (req, res) => {
-  try {
-    const {
-      userId,
-      categories,
-      businessName,
-      businessWebsite,
-      businessLocation,
-      businessContacts,
-      adDescription,
-      templateType,
-    } = req.body;
-  
-    let imageUrl = '';
-    let pdfUrl = '';
-    let videoUrl = '';
-  
-    if (req.file) {
-      const fileName = `${Date.now()}-${req.file.originalname}`;
-      const filePath = path.join(__dirname, '../uploads', fileName);
+// Index to speed up queries for websites by owner
+websiteSchema.index({ ownerId: 1 });
 
-      if (req.file.mimetype.startsWith('image')) {
-        await sharp(req.file.buffer)
-          .resize(300, 300)
-          .toFile(filePath);
-        imageUrl = `/uploads/${fileName}`;
-      } else {
-        await fs.promises.writeFile(filePath, req.file.buffer);
-        if (req.file.mimetype === 'application/pdf') {
-          pdfUrl = `/uploads/${fileName}`;
-        } else if (req.file.mimetype.startsWith('video')) {
-          videoUrl = `/uploads/${fileName}`;
-        }
-      }
+module.exports = mongoose.model('Website', websiteSchema);
+
+// WebsiteController.js
+const Website = require('../models/WebsiteModel');
+
+exports.createWebsite = async (req, res) => {
+  try {
+    const { ownerId, websiteName, websiteLink, logoUrl } = req.body;
+
+    if (!ownerId || !websiteName || !websiteLink) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Check if website URL is already in use
+    const existingWebsite = await Website.findOne({ websiteLink });
+    if (existingWebsite) {
+      return res.status(409).json({ message: 'Website URL already exists' });
+    }
+
+    const newWebsite = new Website({
+      ownerId,
+      websiteName,
+      websiteLink,
+      logoUrl
+    });
+
+    const savedWebsite = await newWebsite.save();
+    res.status(201).json(savedWebsite);
+  } catch (error) {
+    console.error('Error creating website:', error); // Log detailed error
+    res.status(500).json({ message: 'Failed to create website', error });
+  }
+};
+
+exports.getWebsitesByOwner = async (req, res) => {
+  const { ownerId } = req.params;
+
+  try {
+    const websites = await Website.find({ ownerId });
+    res.status(200).json(websites);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch websites', error });
+  }
+};
+
+// Website.js
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useClerk } from '@clerk/clerk-react';
+import axios from 'axios';
+
+function Website() {
+  const { user } = useClerk();
+  const ownerId = user?.id;
+  const [websiteName, setWebsiteName] = useState('');
+  const [websiteLink, setWebsiteUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    if (!websiteLink) {
+      console.error('Website URL is required');
+      return;
     }
   
-    const newRequestAd = new ImportAd({
-      userId,
-      imageUrl,
-      pdfUrl,
-      videoUrl,
-      categories,
-      businessName,
-      businessWebsite,
-      businessLocation,
-      businessContacts,
-      adDescription,
-      templateType,
-    });
+    try {
+      const websiteData = {
+        ownerId,
+        websiteName,
+        websiteLink,
+        logoUrl,
+      };
   
-    const savedRequestAd = await newRequestAd.save();
-    res.status(201).json(savedRequestAd);
-  } catch (error) {
-    console.error('MongoDB Error:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-}];
+      const response = await axios.post('http://localhost:5000/api/websites', websiteData, {
+        headers: {
+          'Content-Type': 'application/json', // Correct content type for JSON
+        },
+      });
+  
+      if (response.status === 201) {
+        navigate('/ads', { state: { websiteId: response.data._id } });
+      } else {
+        console.error('Failed to create website');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
-// ImportAdRoutes.js
-const express = require('express');
-const router = express.Router();
-const importAdController = require('../controllers/ImportAdController');
+  return (
+    <div>
+      <h2>Create Website</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          name="websiteName"
+          placeholder="Website Name"
+          value={websiteName}
+          onChange={(e) => setWebsiteName(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          name="websiteUrl"
+          placeholder="Website URL"
+          value={websiteLink}
+          onChange={(e) => setWebsiteUrl(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          name="logoUrl"
+          placeholder="Logo URL (optional)"
+          value={logoUrl}
+          onChange={(e) => setLogoUrl(e.target.value)}
+        />
+        <button type="submit">Create Website</button>
+      </form>
+    </div>
+  );
+}
 
-router.post('/', importAdController.createImportAd);
-router.get('/', importAdController.getAllAds);
+export default Website;
 
-router.get('/:id', importAdController.getAdById);
-router.get('/ad/:id', importAdController.getAdByIds);
-router.get('/ads/:userId', importAdController.getAdsByUserId);
-router.get('/ads/:userId/with-clicks', importAdController.getAdsByUserIdWithClicks);
-
-module.exports = router;

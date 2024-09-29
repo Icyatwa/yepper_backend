@@ -6,11 +6,11 @@ const importAdSchema = new mongoose.Schema({
   imageUrl: { type: String },
   pdfUrl: { type: String },
   videoUrl: { type: String },
-  categories: [{ type: String, required: true }],  // Array to store selected categories
+  types: [{ type: String, required: true }],
   businessName: { type: String, required: true },
   businessLocation: { type: String, required: true },
   adDescription: { type: String, required: true },
-  templateType: { type: String, required: true },
+  categories: { type: String, required: true },
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);

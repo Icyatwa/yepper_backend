@@ -462,7 +462,6 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
-// Set up multer storage
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
@@ -482,13 +481,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
     const {
       userId,
-      categories,
+      types,
       businessName,
       businessWebsite,
       businessLocation,
       businessContacts,
       adDescription,
-      templateType,
+      categories,
     } = req.body;
   
     let imageUrl = '';
@@ -519,13 +518,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       imageUrl,
       pdfUrl,
       videoUrl,
-      categories,
+      types,
       businessName,
       businessWebsite,
       businessLocation,
       businessContacts,
       adDescription,
-      templateType,
+      categories,
     });
   
     const savedRequestAd = await newRequestAd.save();
@@ -536,173 +535,173 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
   }
 }];
 
-exports.getAdById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const ad = await ImportAd.findById(id);
+// exports.getAdById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const ad = await ImportAd.findById(id);
 
-    if (!ad) {
-      return res.status(404).json({ message: 'Ad not found' });
-    }
+//     if (!ad) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;  // Get the base URL of the server
+//     const baseUrl = `${req.protocol}://${req.get('host')}`;  // Get the base URL of the server
 
-    const template = `
-      <div class="${ad.templateType}">
-        ${ad.imageUrl ? `<img src="${baseUrl}${ad.imageUrl}" alt="Ad Image"/>` : ''}
-        ${ad.pdfUrl ? `<a href="${baseUrl}${ad.pdfUrl}" target="_blank">View PDF</a>` : ''}
-        ${ad.videoUrl ? `<video controls src="${baseUrl}${ad.videoUrl}"></video>` : ''}
-        <p>${ad.adDescription}</p>
-      </div>
-      <style>
-        ${generateTemplateStyles(ad.templateType)}
-      </style>
-    `;
+//     const template = `
+//       <div class="${ad.templateType}">
+//         ${ad.imageUrl ? `<img src="${baseUrl}${ad.imageUrl}" alt="Ad Image"/>` : ''}
+//         ${ad.pdfUrl ? `<a href="${baseUrl}${ad.pdfUrl}" target="_blank">View PDF</a>` : ''}
+//         ${ad.videoUrl ? `<video controls src="${baseUrl}${ad.videoUrl}"></video>` : ''}
+//         <p>${ad.adDescription}</p>
+//       </div>
+//       <style>
+//         ${generateTemplateStyles(ad.templateType)}
+//       </style>
+//     `;
 
-    const scriptContent = `
-      document.write(\`${template}\`);
-    `;
+//     const scriptContent = `
+//       document.write(\`${template}\`);
+//     `;
 
-    res.setHeader('Content-Type', 'application/javascript');
-    res.send(scriptContent);
-  } catch (error) {
-    console.error('MongoDB Error:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
+//     res.setHeader('Content-Type', 'application/javascript');
+//     res.send(scriptContent);
+//   } catch (error) {
+//     console.error('MongoDB Error:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
 
-function generateTemplateStyles(templateType) {
-  switch (templateType) {
-    case 'banner':
-      return `
-        .banner {
-          height: 150px;
-          border: 2px solid #ddd;
-          background-color: #f9f9f9;
-          width: 100%;
-          text-align: center;
-          padding: 10px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-          margin-bottom: 20px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .banner img {
-          max-height: 100px;
-          object-fit: contain;
-        }
-      `;
-    case 'pop-up':
-      return `
-        .pop-up {
-          width: 400px;
-          height: 300px;
-          border: 2px solid #4caf50;
-          background-color: #e8f5e9;
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          z-index: 1000;
-          box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-          padding: 20px;
-          text-align: center;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
-        .pop-up img {
-          max-width: 100%;
-          border-radius: 10px;
-          margin-bottom: 15px;
-        }
-        .pop-up p {
-          margin: 0;
-        }
-      `;
-    case 'pop-down':
-      return `
-        .pop-down {
-          height: 150px;
-          border: 2px solid #f44336;
-          background-color: #ffebee;
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          text-align: center;
-          box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-          padding: 10px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .pop-down img {
-          max-height: 100px;
-          object-fit: contain;
-          margin-bottom: 10px;
-        }
-      `;
-    case 'sidebar':
-      return `
-        .sidebar {
-          width: 300px;
-          height: 600px;
-          border: 2px solid #3f51b5;
-          background-color: #e8eaf6;
-          position: fixed;
-          right: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          padding: 15px;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
-        .sidebar img {
-          max-width: 100%;
-          border-radius: 10px;
-          margin-bottom: 15px;
-        }
-      `;
-    case 'fullscreen':
-      return `
-        .fullscreen {
-          width: 100%;
-          height: 100vh;
-          color: #fff;
-          position: fixed;
-          top: 0;
-          left: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 20px;
-          box-sizing: border-box;
-          text-align: center;
-          overflow: hidden;
-        }
-        .fullscreen img {
-          max-width: 100%;
-          max-height: 80%;
-          border-radius: 10px;
-          margin-bottom: 15px;
-        }
-        .fullscreen p {
-          margin: 0;
-          font-size: 1.5em;
-        }
-      `;
-    default:
-      return '';
-  }
-}
+// function generateTemplateStyles(templateType) {
+//   switch (templateType) {
+//     case 'banner':
+//       return `
+//         .banner {
+//           height: 150px;
+//           border: 2px solid #ddd;
+//           background-color: #f9f9f9;
+//           width: 100%;
+//           text-align: center;
+//           padding: 10px;
+//           box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+//           margin-bottom: 20px;
+//           display: flex;
+//           justify-content: center;
+//           align-items: center;
+//         }
+//         .banner img {
+//           max-height: 100px;
+//           object-fit: contain;
+//         }
+//       `;
+//     case 'pop-up':
+//       return `
+//         .pop-up {
+//           width: 400px;
+//           height: 300px;
+//           border: 2px solid #4caf50;
+//           background-color: #e8f5e9;
+//           position: fixed;
+//           top: 50%;
+//           left: 50%;
+//           transform: translate(-50%, -50%);
+//           z-index: 1000;
+//           box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+//           padding: 20px;
+//           text-align: center;
+//           overflow: hidden;
+//           display: flex;
+//           flex-direction: column;
+//           justify-content: center;
+//           align-items: center;
+//         }
+//         .pop-up img {
+//           max-width: 100%;
+//           border-radius: 10px;
+//           margin-bottom: 15px;
+//         }
+//         .pop-up p {
+//           margin: 0;
+//         }
+//       `;
+//     case 'pop-down':
+//       return `
+//         .pop-down {
+//           height: 150px;
+//           border: 2px solid #f44336;
+//           background-color: #ffebee;
+//           position: fixed;
+//           bottom: 0;
+//           left: 0;
+//           width: 100%;
+//           text-align: center;
+//           box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+//           padding: 10px;
+//           display: flex;
+//           justify-content: center;
+//           align-items: center;
+//         }
+//         .pop-down img {
+//           max-height: 100px;
+//           object-fit: contain;
+//           margin-bottom: 10px;
+//         }
+//       `;
+//     case 'sidebar':
+//       return `
+//         .sidebar {
+//           width: 300px;
+//           height: 600px;
+//           border: 2px solid #3f51b5;
+//           background-color: #e8eaf6;
+//           position: fixed;
+//           right: 0;
+//           top: 50%;
+//           transform: translateY(-50%);
+//           padding: 15px;
+//           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+//           display: flex;
+//           flex-direction: column;
+//           justify-content: center;
+//           align-items: center;
+//         }
+//         .sidebar img {
+//           max-width: 100%;
+//           border-radius: 10px;
+//           margin-bottom: 15px;
+//         }
+//       `;
+//     case 'fullscreen':
+//       return `
+//         .fullscreen {
+//           width: 100%;
+//           height: 100vh;
+//           color: #fff;
+//           position: fixed;
+//           top: 0;
+//           left: 0;
+//           background-color: rgba(0, 0, 0, 0.7);
+//           display: flex;
+//           justify-content: center;
+//           align-items: center;
+//           padding: 20px;
+//           box-sizing: border-box;
+//           text-align: center;
+//           overflow: hidden;
+//         }
+//         .fullscreen img {
+//           max-width: 100%;
+//           max-height: 80%;
+//           border-radius: 10px;
+//           margin-bottom: 15px;
+//         }
+//         .fullscreen p {
+//           margin: 0;
+//           font-size: 1.5em;
+//         }
+//       `;
+//     default:
+//       return '';
+//   }
+// }
 
 exports.getAllAds = async (req, res) => {
   try {
