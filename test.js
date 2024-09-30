@@ -1,141 +1,160 @@
-// WebsiteModel.js
-const mongoose = require('mongoose');
 
-const websiteSchema = new mongoose.Schema({
-  ownerId: { type: String, required: true },
-  websiteName: { type: String, required: true },
-  websiteLink: { type: String, required: true, unique: true },
-  logoUrl: { type: String, required: false },
-  createdAt: { type: Date, default: Date.now },
-});
+// AdSpaceController.js
+const AdSpace = require('../models/AdSpaceModel');
 
-// Index to speed up queries for websites by owner
-websiteSchema.index({ ownerId: 1 });
-
-module.exports = mongoose.model('Website', websiteSchema);
-
-// WebsiteController.js
-const Website = require('../models/WebsiteModel');
-
-exports.createWebsite = async (req, res) => {
+exports.createSpace = async (req, res) => {
   try {
-    const { ownerId, websiteName, websiteLink, logoUrl } = req.body;
-
-    if (!ownerId || !websiteName || !websiteLink) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    // Check if website URL is already in use
-    const existingWebsite = await Website.findOne({ websiteLink });
-    if (existingWebsite) {
-      return res.status(409).json({ message: 'Website URL already exists' });
-    }
-
-    const newWebsite = new Website({
-      ownerId,
-      websiteName,
-      websiteLink,
-      logoUrl
-    });
-
-    const savedWebsite = await newWebsite.save();
-    res.status(201).json(savedWebsite);
+    const { categoryId, spaceType, price, availability, userCount, instructions } = req.body;
+    const newSpace = new AdSpace({ categoryId, spaceType, price, availability, userCount, instructions });
+    const savedSpace = await newSpace.save();
+    res.status(201).json(savedSpace);
   } catch (error) {
-    console.error('Error creating website:', error); // Log detailed error
-    res.status(500).json({ message: 'Failed to create website', error });
+    res.status(500).json({ message: 'Failed to create ad space', error });
   }
 };
 
-exports.getWebsitesByOwner = async (req, res) => {
-  const { ownerId } = req.params;
+// AdSpaceRoutes.js
+const express = require('express');
+const router = express.Router();
+const adSpaceController = require('../controllers/AdSpaceController');
 
-  try {
-    const websites = await Website.find({ ownerId });
-    res.status(200).json(websites);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch websites', error });
-  }
-};
+router.post('/', adSpaceController.createSpace);
 
-// Website.js
+module.exports = router;
+
+// Spaces
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useClerk } from '@clerk/clerk-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import Header from '../../pages/header';
 
-function Website() {
-  const { user } = useClerk();
-  const ownerId = user?.id;
-  const [websiteName, setWebsiteName] = useState('');
-  const [websiteLink, setWebsiteUrl] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-
+function Spaces() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { categoryId, selectedCategories, prices, customCategory } = location.state; // Passed from Ads.js
+  const [spaces, setSpaces] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  
-    if (!websiteLink) {
-      console.error('Website URL is required');
-      return;
-    }
-  
+  // Handle space selection for each category
+  const handleSpaceChange = (category, space, value) => {
+    setSpaces((prevState) => ({
+      ...prevState,
+      [category]: {
+        ...prevState[category],
+        [space]: value,
+      },
+    }));
+  };
+
+  // Function to submit data to the backend
+  const submitSpacesToDatabase = async () => {
+    setLoading(true);
     try {
-      const websiteData = {
-        ownerId,
-        websiteName,
-        websiteLink,
-        logoUrl,
-      };
-  
-      const response = await axios.post('http://localhost:5000/api/websites', websiteData, {
-        headers: {
-          'Content-Type': 'application/json', // Correct content type for JSON
-        },
-      });
-  
-      if (response.status === 201) {
-        navigate('/ads', { state: { websiteId: response.data._id } });
-      } else {
-        console.error('Failed to create website');
+      // Extracting all space data to send to the backend
+      for (const category in spaces) {
+        const spaceData = spaces[category];
+        if (spaceData.header || spaceData.sidebar) {
+          // Send each space data separately
+          await axios.post('http://localhost:5000/api/ad-spaces', {
+            categoryId: categoryId, // assuming categoryId is available for all spaces
+            spaceType: spaceData.header ? 'Header' : 'Sidebar', // choose Header or Sidebar
+            price: spaceData.price,
+            availability: 1, // hardcoded as per schema (can be dynamic)
+            userCount: spaceData.userCount,
+            instructions: spaceData.instructions,
+          });
+        }
       }
+
+      // After successful submission, navigate to the APIs page
+      navigate('/apis', {
+        state: { selectedCategories, prices, spaces, customCategory },
+      });
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Failed to submit spaces to the database:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Helper function to render space checkboxes for each category
+  const renderSpacesForCategory = (category) => (
+    <div key={category}>
+      <h3>{category.charAt(0).toUpperCase() + category.slice(1)} Category</h3>
+      <label>
+        <input
+          type="checkbox"
+          onChange={(e) => handleSpaceChange(category, 'header', e.target.checked)}
+        />
+        Header
+      </label>
+      {spaces[category]?.header && (
+        <div>
+          <input
+            type="number"
+            placeholder="Price"
+            onChange={(e) => handleSpaceChange(category, 'price', e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="User Count"
+            onChange={(e) => handleSpaceChange(category, 'userCount', e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Instructions"
+            onChange={(e) => handleSpaceChange(category, 'instructions', e.target.value)}
+          />
+        </div>
+      )}
+
+      <label>
+        <input
+          type="checkbox"
+          onChange={(e) => handleSpaceChange(category, 'sidebar', e.target.checked)}
+        />
+        Sidebar
+      </label>
+      {spaces[category]?.sidebar && (
+        <div>
+          <input
+            type="number"
+            placeholder="Price"
+            onChange={(e) => handleSpaceChange(category, 'price', e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="User Count"
+            onChange={(e) => handleSpaceChange(category, 'userCount', e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Instructions"
+            onChange={(e) => handleSpaceChange(category, 'instructions', e.target.value)}
+          />
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      <h2>Create Website</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="websiteName"
-          placeholder="Website Name"
-          value={websiteName}
-          onChange={(e) => setWebsiteName(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          name="websiteUrl"
-          placeholder="Website URL"
-          value={websiteLink}
-          onChange={(e) => setWebsiteUrl(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          name="logoUrl"
-          placeholder="Logo URL (optional)"
-          value={logoUrl}
-          onChange={(e) => setLogoUrl(e.target.value)}
-        />
-        <button type="submit">Create Website</button>
-      </form>
+      <Header />
+      <h2>Select Ad Spaces</h2>
+      {selectedCategories.banner && renderSpacesForCategory('banner')}
+      {selectedCategories.popup && renderSpacesForCategory('popup')}
+      {selectedCategories.custom && renderSpacesForCategory('custom')}
+
+      <button onClick={submitSpacesToDatabase} disabled={loading}>
+        {loading ? 'Saving...' : 'Continue to View APIs'}
+      </button>
     </div>
   );
 }
 
-export default Website;
+export default Spaces;
 
+Spaces.js:29 
+        
+        
+       POST http://localhost:5000/api/ad-spaces 500 (Internal Server Error)

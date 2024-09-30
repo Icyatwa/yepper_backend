@@ -87,16 +87,16 @@ exports.getCategories = async (req, res) => {
 };
 
 exports.getCategoriesByWebsite = async (req, res) => {
-  const { ownerId, websiteId } = req.params;
+  const { websiteId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const categories = await AdCategory.find({ ownerId, websiteId }) // Fetch categories by owner and website
+    const categories = await AdCategory.find({ websiteId }) // Fetch categories by website
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
 
-    const count = await AdCategory.countDocuments({ ownerId, websiteId });
+    const count = await AdCategory.countDocuments({ websiteId });
 
     res.status(200).json({
       categories,
