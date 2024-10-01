@@ -5,5 +5,6 @@ const adCategoryController = require('../controllers/AdCategoryController');
 
 router.post('/', adCategoryController.createCategory);
 router.get('/:websiteId', adCategoryController.getCategoriesByWebsite);
+router.get('/category/:categoryId', adCategoryController.getCategoryById);
 
 module.exports = router;

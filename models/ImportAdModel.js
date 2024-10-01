@@ -9,7 +9,8 @@ const importAdSchema = new mongoose.Schema({
   businessLocation: { type: String, required: true },
   adDescription: { type: String, required: true },
   selectedWebsites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
-  selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }] // Add selected categories here
+  selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
+  selectedSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdSpace' }]
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);

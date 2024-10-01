@@ -485,7 +485,8 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       businessLocation,
       adDescription,
       selectedWebsites, // Add this
-      selectedCategories // Add this
+      selectedCategories, // Add this
+      selectedSpaces
     } = req.body;
 
     let imageUrl = '';
@@ -519,8 +520,9 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       businessName,
       businessLocation,
       adDescription,
-      selectedWebsites, // Add selected websites here
-      selectedCategories // Save selected categories as well
+      selectedWebsites,
+      selectedCategories,
+      selectedSpaces
     });
 
     const savedRequestAd = await newRequestAd.save();

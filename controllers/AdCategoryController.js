@@ -129,3 +129,19 @@ exports.getCategoriesByWebsite = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch categories', error });
   }
 };
+
+exports.getCategoryById = async (req, res) => {
+  const { categoryId } = req.params;
+
+  try {
+    const category = await AdCategory.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    res.status(200).json(category);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch category', error });
+  }
+};
