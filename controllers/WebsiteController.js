@@ -30,6 +30,15 @@ exports.createWebsite = async (req, res) => {
   }
 };
 
+exports.getAllWebsites = async (req, res) => {
+  try {
+    const websites = await Website.find();
+    res.status(200).json(websites);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch websites', error });
+  }
+};
+
 exports.getWebsitesByOwner = async (req, res) => {
   const { ownerId } = req.params;
 
@@ -38,5 +47,19 @@ exports.getWebsitesByOwner = async (req, res) => {
     res.status(200).json(websites);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch websites', error });
+  }
+};
+
+exports.getWebsiteById = async (req, res) => {
+  const { websiteId } = req.params;
+
+  try {
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return res.status(404).json({ message: 'Website not found' });
+    }
+    res.status(200).json(website);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch website', error });
   }
 };

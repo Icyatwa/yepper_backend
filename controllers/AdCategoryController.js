@@ -86,12 +86,34 @@ exports.getCategories = async (req, res) => {
   }
 };
 
+// exports.getCategoriesByWebsite = async (req, res) => {
+//   const { websiteId } = req.params;
+//   const { page = 1, limit = 10 } = req.query;
+
+//   try {
+//     const categories = await AdCategory.find({ websiteId }) // Fetch categories by website
+//       .limit(limit * 1)
+//       .skip((page - 1) * limit)
+//       .exec();
+
+//     const count = await AdCategory.countDocuments({ websiteId });
+
+//     res.status(200).json({
+//       categories,
+//       totalPages: Math.ceil(count / limit),
+//       currentPage: page
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to fetch categories', error });
+//   }
+// };
+
 exports.getCategoriesByWebsite = async (req, res) => {
   const { websiteId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const categories = await AdCategory.find({ websiteId }) // Fetch categories by website
+    const categories = await AdCategory.find({ websiteId })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();

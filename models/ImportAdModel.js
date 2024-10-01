@@ -1,19 +1,20 @@
 // ImportAdModel.js
 const mongoose = require('mongoose');
-
 const importAdSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   imageUrl: { type: String },
   pdfUrl: { type: String },
   videoUrl: { type: String },
-  types: [{ type: String, required: true }],
   businessName: { type: String, required: true },
   businessLocation: { type: String, required: true },
   adDescription: { type: String, required: true },
-  categories: { type: String, required: true },
+  selectedWebsites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
+  selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }] // Add selected categories here
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);
+
+
 
 // // importAdSchema.js
 // const mongoose = require('mongoose');

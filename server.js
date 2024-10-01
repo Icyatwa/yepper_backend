@@ -27,7 +27,7 @@ app.use('/api/requestAd', requestAdRoutes);
 app.use('/api/websites', websiteRoutes);
 app.use('/api/ad-categories', adCategoryRoutes);
 app.use('/api/ad-spaces', adSpaceRoutes);
-app.use('/api/apiGenerator', apiGeneratorRoutes);
+app.use('/api/apiGenerator', apiGeneratorRoutes); 
 
 const server = http.createServer(app);
 const io = socketIo(server);
