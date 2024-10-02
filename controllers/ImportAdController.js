@@ -39,24 +39,24 @@
 //     let pdfUrl = '';
 //     let videoUrl = '';
 
-//     if (req.file) {
-//       const fileName = `${Date.now()}-${req.file.originalname}`;
-//       const filePath = path.join(__dirname, '../uploads', fileName);
+    // if (req.file) {
+    //   const fileName = `${Date.now()}-${req.file.originalname}`;
+    //   const filePath = path.join(__dirname, '../uploads', fileName);
 
-//       if (req.file.mimetype.startsWith('image')) {
-//         await sharp(req.file.buffer)
-//           .resize(300, 300)
-//           .toFile(filePath);
-//         imageUrl = `/uploads/${fileName}`;
-//       } else {
-//         await fs.promises.writeFile(filePath, req.file.buffer);
-//         if (req.file.mimetype === 'application/pdf') {
-//           pdfUrl = `/uploads/${fileName}`;
-//         } else if (req.file.mimetype.startsWith('video')) {
-//           videoUrl = `/uploads/${fileName}`;
-//         }
-//       }
-//     }
+    //   if (req.file.mimetype.startsWith('image')) {
+    //     await sharp(req.file.buffer)
+    //       .resize(300, 300)
+    //       .toFile(filePath);
+    //     imageUrl = `/uploads/${fileName}`;
+    //   } else {
+    //     await fs.promises.writeFile(filePath, req.file.buffer);
+    //     if (req.file.mimetype === 'application/pdf') {
+    //       pdfUrl = `/uploads/${fileName}`;
+    //     } else if (req.file.mimetype.startsWith('video')) {
+    //       videoUrl = `/uploads/${fileName}`;
+    //     }
+    //   }
+    // }
 
 //     const tx_ref = 'LEDOST-' + Date.now();
 //     const paymentPayload = {
@@ -484,10 +484,15 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       businessName,
       businessLocation,
       adDescription,
-      selectedWebsites, // Add this
-      selectedCategories, // Add this
+      selectedWebsites,
+      selectedCategories,
       selectedSpaces
     } = req.body;
+
+    // Parse JSON strings into arrays (in case they were stringified on the frontend)
+    const websitesArray = JSON.parse(selectedWebsites);
+    const categoriesArray = JSON.parse(selectedCategories);
+    const spacesArray = JSON.parse(selectedSpaces);
 
     let imageUrl = '';
     let pdfUrl = '';
@@ -520,12 +525,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       businessName,
       businessLocation,
       adDescription,
-      selectedWebsites,
-      selectedCategories,
-      selectedSpaces
+      selectedWebsites: websitesArray,
+      selectedCategories: categoriesArray,
+      selectedSpaces: spacesArray
     });
 
     const savedRequestAd = await newRequestAd.save();
+    
     res.status(201).json(savedRequestAd);
   } catch (error) {
     console.error('MongoDB Error:', error);

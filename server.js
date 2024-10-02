@@ -21,13 +21,12 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
 app.use('/api/importAds', importAdRoutes);
 app.use('/api/requestAd', requestAdRoutes);
 app.use('/api/websites', websiteRoutes);
 app.use('/api/ad-categories', adCategoryRoutes);
 app.use('/api/ad-spaces', adSpaceRoutes);
-app.use('/api/apiGenerator', apiGeneratorRoutes); 
+app.use('/api/generate-api', apiGeneratorRoutes);
 
 const server = http.createServer(app);
 const io = socketIo(server);
