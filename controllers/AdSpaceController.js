@@ -26,12 +26,12 @@ const generateApiCodesForAllLanguages = (spaceType, websiteId, categoryId) => {
   const apiCodes = {
     HTML: `<script src="https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}"></script>`,
     JavaScript: `<script>
-(function() {
-  var ad = document.createElement('script');
-  ad.src = "https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}";
-  document.getElementById("${spaceType}-ad").appendChild(ad);
-})();
-</script>`,
+                  (function() {
+                    var ad = document.createElement('script');
+                    ad.src = "https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}";
+                    document.getElementById("${spaceType}-ad").appendChild(ad);
+                  })();
+                </script>`,
     PHP: `<?php echo '<div id="${spaceType}-ad"><script src="https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}"></script></div>'; ?>`,
     Python: `print('<div id="${spaceType}-ad"><script src="https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}"></script></div>')`
   };
@@ -74,7 +74,13 @@ exports.createSpace = async (req, res) => {
 
 exports.getAllSpaces = async (req, res) => {
   try {
-    const spaces = await AdSpace.find().populate('categoryId'); // Fetch all spaces and populate category details
+    const spaces = await AdSpace.find()
+      .populate({
+        path: 'categoryId', 
+        populate: {
+          path: 'websiteId'  // Populate the websiteId inside the category
+        }
+      });  
     res.status(200).json(spaces);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch all ad spaces', error });

@@ -20,6 +20,7 @@ const mongoose = require('mongoose');
 
 const adSpaceSchema = new mongoose.Schema({
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory', required: true },
+  // websiteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Website', required: true },
   spaceType: { type: String, required: true },
   price: { type: Number, required: true, min: 0 },
   availability: { type: Boolean, default: true },
@@ -30,7 +31,7 @@ const adSpaceSchema = new mongoose.Schema({
     JavaScript: { type: String },
     PHP: { type: String },
     Python: { type: String },
-  }, // Object to store API codes for different languages
+  },
   createdAt: { type: Date, default: Date.now }
 });
 
