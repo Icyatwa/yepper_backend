@@ -457,6 +457,7 @@
 
 
 const ImportAd = require('../models/ImportAdModel');
+const AdSpace = require('../models/AdSpaceModel');
 const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
@@ -477,6 +478,68 @@ const upload = multer({
   }
 });
 
+// exports.createImportAd = [upload.single('file'), async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       businessName,
+//       businessLocation,
+//       adDescription,
+//       selectedWebsites,
+//       selectedCategories,
+//       selectedSpaces
+//     } = req.body;
+
+//     // Parse JSON strings into arrays (in case they were stringified on the frontend)
+//     const websitesArray = JSON.parse(selectedWebsites);
+//     const categoriesArray = JSON.parse(selectedCategories);
+//     const spacesArray = JSON.parse(selectedSpaces);
+
+//     let imageUrl = '';
+//     let pdfUrl = '';
+//     let videoUrl = '';
+
+//     if (req.file) {
+//       const fileName = `${Date.now()}-${req.file.originalname}`;
+//       const filePath = path.join(__dirname, '../uploads', fileName);
+
+//       if (req.file.mimetype.startsWith('image')) {
+//         await sharp(req.file.buffer)
+//           .resize(300, 300)
+//           .toFile(filePath);
+//         imageUrl = `/uploads/${fileName}`;
+//       } else {
+//         await fs.promises.writeFile(filePath, req.file.buffer);
+//         if (req.file.mimetype === 'application/pdf') {
+//           pdfUrl = `/uploads/${fileName}`;
+//         } else if (req.file.mimetype.startsWith('video')) {
+//           videoUrl = `/uploads/${fileName}`;
+//         }
+//       }
+//     }
+
+//     const newRequestAd = new ImportAd({
+//       userId,
+//       imageUrl,
+//       pdfUrl,
+//       videoUrl,
+//       businessName,
+//       businessLocation,
+//       adDescription,
+//       selectedWebsites: websitesArray,
+//       selectedCategories: categoriesArray,
+//       selectedSpaces: spacesArray
+//     });
+
+//     const savedRequestAd = await newRequestAd.save();
+    
+//     res.status(201).json(savedRequestAd);
+//   } catch (error) {
+//     console.error('MongoDB Error:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// }];
+
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
     const {
@@ -489,7 +552,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       selectedSpaces
     } = req.body;
 
-    // Parse JSON strings into arrays (in case they were stringified on the frontend)
+    // Parse JSON strings
     const websitesArray = JSON.parse(selectedWebsites);
     const categoriesArray = JSON.parse(selectedCategories);
     const spacesArray = JSON.parse(selectedSpaces);
@@ -498,14 +561,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     let pdfUrl = '';
     let videoUrl = '';
 
+    // Process uploaded file
     if (req.file) {
       const fileName = `${Date.now()}-${req.file.originalname}`;
       const filePath = path.join(__dirname, '../uploads', fileName);
 
       if (req.file.mimetype.startsWith('image')) {
-        await sharp(req.file.buffer)
-          .resize(300, 300)
-          .toFile(filePath);
+        await sharp(req.file.buffer).resize(300, 300).toFile(filePath);
         imageUrl = `/uploads/${fileName}`;
       } else {
         await fs.promises.writeFile(filePath, req.file.buffer);
@@ -517,6 +579,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       }
     }
 
+    // Create ImportAd entry
     const newRequestAd = new ImportAd({
       userId,
       imageUrl,
@@ -532,9 +595,15 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
 
     const savedRequestAd = await newRequestAd.save();
     
+    // Push this ad to the selected spaces
+    await AdSpace.updateMany(
+      { _id: { $in: spacesArray } }, 
+      { $push: { selectedAds: savedRequestAd._id } }
+    );
+
     res.status(201).json(savedRequestAd);
   } catch (error) {
-    console.error('MongoDB Error:', error);
+    console.error('Error importing ad:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
