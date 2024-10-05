@@ -54,7 +54,6 @@ exports.paymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
 
-    // Verify the transaction status from Flutterwave
     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
       headers: {
         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
