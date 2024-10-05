@@ -18,7 +18,7 @@ exports.initiatePayment = async (req, res) => {
       tx_ref: tx_ref,
       amount: amount,
       currency: currency,
-      redirect_url: 'http://localhost:5000/api/payment/callback',
+      redirect_url: 'https://yepper-backend.onrender.com/api/payment/callback',
       customer: {
         email: email || 'no-email@example.com',
         phonenumber: phoneNumber,
@@ -65,10 +65,10 @@ exports.paymentCallback = async (req, res) => {
 
     if (status === 'successful') {
       console.log(`Payment for ${tx_ref} was successful`);
-      return res.redirect('http://localhost:3000/payment-success');
+      return res.redirect('https://payment-test-page.vercel.app/payment-success');
     } else {
       console.error('Payment failed or incomplete:', status);
-      return res.redirect('http://localhost:3000/payment-failed');
+      return res.redirect('https://payment-test-page.vercel.app/payment-failed');
     }
   } catch (error) {
     console.error('Error processing payment callback:', error);
