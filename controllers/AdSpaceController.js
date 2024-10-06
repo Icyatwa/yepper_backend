@@ -3,18 +3,20 @@ const AdSpace = require('../models/AdSpaceModel');
 const AdCategory = require('../models/AdCategoryModel');
 const ImportAd = require('../models/ImportAdModel');
 
-// const generateApiCodesForAllLanguages = (spaceType, websiteId, categoryId) => {
+// const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId) => {
+//   const apiUrl = `http://localhost:5000/api/ads/display?space=${spaceId}&website=${websiteId}&category=${categoryId}`;
+  
 //   const apiCodes = {
-//     HTML: `<script src="https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}"></script>`,
+//     HTML: `<script src="${apiUrl}"></script>`,
 //     JavaScript: `<script>
 //                   (function() {
 //                     var ad = document.createElement('script');
-//                     ad.src = "https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}";
-//                     document.getElementById("${spaceType}-ad").appendChild(ad);
+//                     ad.src = "${apiUrl}";
+//                     document.getElementById("${spaceId}-ad").appendChild(ad);
 //                   })();
 //                 </script>`,
-//     PHP: `<?php echo '<div id="${spaceType}-ad"><script src="https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}"></script></div>'; ?>`,
-//     Python: `print('<div id="${spaceType}-ad"><script src="https://example.com/api/ads?space=${spaceType}&website=${websiteId}&category=${categoryId}"></script></div>')`
+//     PHP: `<?php echo '<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>'; ?>`,
+//     Python: `print('<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>')`
 //   };
 
 //   return apiCodes;
@@ -25,27 +27,32 @@ const ImportAd = require('../models/ImportAdModel');
 //     const { categoryId, spaceType, price, availability, userCount, instructions } = req.body;
 
 //     if (!categoryId || !spaceType || !price || !availability || !userCount) {
-//       return res.status(400).json({ message: 'All fields are required' });
+//       return res.status(400).json({ message: 'All required fields must be provided' });
 //     }
 
 //     // Retrieve website ID from the category
 //     const category = await AdCategory.findById(categoryId).populate('websiteId');
+//     if (!category) {
+//       return res.status(404).json({ message: 'Category not found' });
+//     }
 //     const websiteId = category.websiteId._id;
 
-//     // Generate API codes for all languages
-//     const apiCodes = generateApiCodesForAllLanguages(spaceType, websiteId, categoryId);
-
+//     // Create new AdSpace
 //     const newSpace = new AdSpace({ 
-//       categoryId, 
-//       spaceType, 
-//       price, 
-//       availability, 
-//       userCount, 
-//       instructions,
-//       apiCodes // Save all API codes in the database as an object
+//       categoryId,
+//       spaceType,
+//       price,
+//       availability,
+//       userCount,
+//       instructions
 //     });
-
 //     const savedSpace = await newSpace.save();
+
+//     // Generate API codes
+//     const apiCodes = generateApiCodesForAllLanguages(savedSpace._id, websiteId, categoryId);
+//     savedSpace.apiCodes = apiCodes;
+//     await savedSpace.save();
+
 //     res.status(201).json(savedSpace);
 //   } catch (error) {
 //     console.error('Error saving ad space:', error);
@@ -53,20 +60,35 @@ const ImportAd = require('../models/ImportAdModel');
 //   }
 // };
 
-const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId) => {
+const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDate = null, endDate = null) => {
   const apiUrl = `http://localhost:5000/api/ads/display?space=${spaceId}&website=${websiteId}&category=${categoryId}`;
-  
+
+  const dateCheckScript = startDate && endDate
+    ? `
+      const now = new Date();
+      const start = new Date("${startDate}");
+      const end = new Date("${endDate}");
+      if (now >= start && now <= end) {
+        var ad = document.createElement('script');
+        ad.src = "${apiUrl}";
+        document.getElementById("${spaceId}-ad").appendChild(ad);
+      }
+    `
+    : `
+      var ad = document.createElement('script');
+      ad.src = "${apiUrl}";
+      document.getElementById("${spaceId}-ad").appendChild(ad);
+    `;
+
   const apiCodes = {
     HTML: `<script src="${apiUrl}"></script>`,
     JavaScript: `<script>
                   (function() {
-                    var ad = document.createElement('script');
-                    ad.src = "${apiUrl}";
-                    document.getElementById("${spaceId}-ad").appendChild(ad);
+                    ${dateCheckScript}
                   })();
                 </script>`,
     PHP: `<?php echo '<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>'; ?>`,
-    Python: `print('<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>')`
+    Python: `print('<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>')`,
   };
 
   return apiCodes;
@@ -74,7 +96,7 @@ const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId) => {
 
 exports.createSpace = async (req, res) => {
   try {
-    const { categoryId, spaceType, price, availability, userCount, instructions } = req.body;
+    const { categoryId, spaceType, price, availability, userCount, instructions, startDate, endDate } = req.body;
 
     if (!categoryId || !spaceType || !price || !availability || !userCount) {
       return res.status(400).json({ message: 'All required fields must be provided' });
@@ -88,18 +110,20 @@ exports.createSpace = async (req, res) => {
     const websiteId = category.websiteId._id;
 
     // Create new AdSpace
-    const newSpace = new AdSpace({ 
+    const newSpace = new AdSpace({
       categoryId,
       spaceType,
       price,
       availability,
       userCount,
-      instructions
+      instructions,
+      startDate,
+      endDate
     });
     const savedSpace = await newSpace.save();
 
     // Generate API codes
-    const apiCodes = generateApiCodesForAllLanguages(savedSpace._id, websiteId, categoryId);
+    const apiCodes = generateApiCodesForAllLanguages(savedSpace._id, websiteId, categoryId, startDate, endDate);
     savedSpace.apiCodes = apiCodes;
     await savedSpace.save();
 
