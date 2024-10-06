@@ -89,11 +89,11 @@ exports.createSpace = async (req, res) => {
 
     // Create new AdSpace
     const newSpace = new AdSpace({ 
-      categoryId, 
-      spaceType, 
-      price, 
-      availability, 
-      userCount, 
+      categoryId,
+      spaceType,
+      price,
+      availability,
+      userCount,
       instructions
     });
     const savedSpace = await newSpace.save();

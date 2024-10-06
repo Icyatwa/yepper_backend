@@ -54,6 +54,7 @@ exports.paymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
 
+    // Verify the transaction status from Flutterwave
     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
       headers: {
         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
@@ -64,10 +65,10 @@ exports.paymentCallback = async (req, res) => {
 
     if (status === 'successful') {
       console.log(`Payment for ${tx_ref} was successful`);
-      return res.redirect('https://payment-test-page.vercel.app/payment-success');
+      return res.redirect('http://localhost:3000/payment-success');
     } else {
       console.error('Payment failed or incomplete:', status);
-      return res.redirect('https://payment-test-page.vercel.app/payment-failed');
+      return res.redirect('http://localhost:3000/payment-failed');
     }
   } catch (error) {
     console.error('Error processing payment callback:', error);
