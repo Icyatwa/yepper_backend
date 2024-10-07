@@ -12,6 +12,7 @@ const websiteRoutes = require('./routes/WebsiteRoutes');
 const adCategoryRoutes = require('./routes/AdCategoryRoutes');
 const adSpaceRoutes = require('./routes/AdSpaceRoutes');
 const apiGeneratorRoutes = require('./routes/ApiGeneratorRoutes');
+const adApprovalRoutes = require('./routes/AdApprovalRoutes');
 const adDisplayRoutes = require('./routes/AdDisplayRoutes');
 const paymentRoutes = require('./routes/PaymentRoutes');
 
@@ -29,6 +30,7 @@ app.use('/api/websites', websiteRoutes);
 app.use('/api/ad-categories', adCategoryRoutes);
 app.use('/api/ad-spaces', adSpaceRoutes);
 app.use('/api/generate-api', apiGeneratorRoutes);
+app.use('/api/accept', adApprovalRoutes);
 app.use('/api/ads', adDisplayRoutes);
 app.use('/api/payment', paymentRoutes);
 

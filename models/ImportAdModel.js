@@ -1,22 +1,3 @@
-// ImportAdModel.js
-const mongoose = require('mongoose');
-const importAdSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  imageUrl: { type: String },
-  pdfUrl: { type: String },
-  videoUrl: { type: String },
-  businessName: { type: String, required: true },
-  businessLocation: { type: String, required: true },
-  adDescription: { type: String, required: true },
-  selectedWebsites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
-  selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
-  selectedSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdSpace' }]
-});
-
-module.exports = mongoose.model('ImportAd', importAdSchema);
-
-
-
 // // importAdSchema.js
 // const mongoose = require('mongoose');
 
@@ -38,3 +19,39 @@ module.exports = mongoose.model('ImportAd', importAdSchema);
 // }, { timestamps: true });
 
 // module.exports = mongoose.model('ImportAd', importAdSchema);
+
+
+// // ImportAdModel.js
+// const mongoose = require('mongoose');
+// const importAdSchema = new mongoose.Schema({
+//   userId: { type: String, required: true },
+//   imageUrl: { type: String },
+//   pdfUrl: { type: String },
+//   videoUrl: { type: String },
+//   businessName: { type: String, required: true },
+//   businessLocation: { type: String, required: true },
+//   adDescription: { type: String, required: true },
+//   selectedWebsites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
+//   selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
+//   selectedSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdSpace' }]
+// });
+
+// module.exports = mongoose.model('ImportAd', importAdSchema);
+
+// ImportAdModel.js
+const mongoose = require('mongoose');
+const importAdSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  imageUrl: { type: String },
+  pdfUrl: { type: String },
+  videoUrl: { type: String },
+  businessName: { type: String, required: true },
+  businessLocation: { type: String, required: true },
+  adDescription: { type: String, required: true },
+  selectedWebsites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
+  selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
+  selectedSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdSpace' }],
+  approved: { type: Boolean, default: false },
+});
+
+module.exports = mongoose.model('ImportAd', importAdSchema);
