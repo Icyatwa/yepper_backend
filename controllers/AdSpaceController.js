@@ -205,7 +205,7 @@ const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDa
 
 exports.createSpace = async (req, res) => {
   try {
-    const { categoryId, spaceType, price, availability, userCount, instructions, startDate, endDate } = req.body;
+    const { categoryId, spaceType, price, availability, userCount, instructions, startDate, endDate, webOwnerEmail } = req.body;
 
     if (!categoryId || !spaceType || !price || !availability || !userCount) {
       return res.status(400).json({ message: 'All required fields must be provided' });
@@ -227,7 +227,8 @@ exports.createSpace = async (req, res) => {
       userCount,
       instructions,
       startDate,
-      endDate
+      endDate,
+      webOwnerEmail
     });
     const savedSpace = await newSpace.save();
 

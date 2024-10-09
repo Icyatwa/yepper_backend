@@ -1,3 +1,4 @@
+// AdApprovalController.js
 const ImportAd = require('../models/ImportAdModel');
 
 // Route to get pending ads

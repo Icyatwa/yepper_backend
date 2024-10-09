@@ -608,6 +608,8 @@ const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
+// const { sendApprovalEmail } = require('./emailService');
+const mailgun = require('mailgun-js');
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -623,6 +625,9 @@ const upload = multer({
     cb(new Error('Invalid file type'));
   }
 });
+
+// Setup Mailgun with your domain and API key
+const mg = mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN });
 
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
@@ -684,6 +689,36 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       { _id: { $in: spacesArray } }, 
       { $push: { selectedAds: savedRequestAd._id } }
     );
+
+    // Send notification email to the web owner(s) for each selected space
+    const adSpaces = await AdSpace.find({ _id: { $in: spacesArray } }).populate('categoryId');
+    adSpaces.forEach(space => {
+      const webOwnerEmail = space.webOwnerEmail;
+      const emailData = {
+        from: 'icyatwandoba@gmail.com',
+        to: webOwnerEmail,
+        subject: 'New Ad Request Pending Approval',
+        text: `Hello,
+
+        You have a new ad request for approval on your website. Please review the ad and approve or reject it. 
+
+        Business Name: ${businessName}
+        Ad Description: ${adDescription}
+
+        You can view it here: <link to your dashboard>
+
+        Best regards,
+        Your Website Team`
+      };
+
+      mg.messages().send(emailData, (error, body) => {
+        if (error) {
+          console.error('Error sending email:', error);
+        } else {
+          console.log('Email sent:', body);
+        }
+      });
+    });
 
     res.status(201).json(savedRequestAd);
   } catch (error) {

@@ -66,11 +66,13 @@ const adSpaceSchema = new mongoose.Schema({
   },
   selectedAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd' }],
   createdAt: { type: Date, default: Date.now },
+  webOwnerEmail: { type: String, required: true },
 });
 
 adSpaceSchema.virtual('remainingUserCount').get(function () {
   return this.userCount - this.selectedAds.length;
 });
+
 
 adSpaceSchema.pre('validate', function (next) {
   if (
@@ -81,7 +83,6 @@ adSpaceSchema.pre('validate', function (next) {
   }
   next();
 });
-
 
 adSpaceSchema.index({ categoryId: 1 }); // Index for faster lookups
 
