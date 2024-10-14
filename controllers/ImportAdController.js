@@ -608,8 +608,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
-// const { sendApprovalEmail } = require('./emailService');
-const mailgun = require('mailgun-js');
+const sendEmailNotification = require('./emailService');
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -625,9 +624,6 @@ const upload = multer({
     cb(new Error('Invalid file type'));
   }
 });
-
-// Setup Mailgun with your domain and API key
-const mg = mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: process.env.MAILGUN_DOMAIN });
 
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
@@ -683,42 +679,27 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     });
 
     const savedRequestAd = await newRequestAd.save();
-    
+
+    // Get the ad spaces that the ad owner selected
+    const adSpaces = await AdSpace.find({ _id: { $in: spacesArray } });
+
     // Push this ad to the selected spaces
     await AdSpace.updateMany(
       { _id: { $in: spacesArray } }, 
       { $push: { selectedAds: savedRequestAd._id } }
     );
 
-    // Send notification email to the web owner(s) for each selected space
-    const adSpaces = await AdSpace.find({ _id: { $in: spacesArray } }).populate('categoryId');
-    adSpaces.forEach(space => {
-      const webOwnerEmail = space.webOwnerEmail;
-      const emailData = {
-        from: 'icyatwandoba@gmail.com',
-        to: webOwnerEmail,
-        subject: 'New Ad Request Pending Approval',
-        text: `Hello,
-
-        You have a new ad request for approval on your website. Please review the ad and approve or reject it. 
-
-        Business Name: ${businessName}
-        Ad Description: ${adDescription}
-
-        You can view it here: <link to your dashboard>
-
-        Best regards,
-        Your Website Team`
-      };
-
-      mg.messages().send(emailData, (error, body) => {
-        if (error) {
-          console.error('Error sending email:', error);
-        } else {
-          console.log('Email sent:', body);
-        }
-      });
-    });
+    // Notify each web owner via email
+    for (const space of adSpaces) {
+      const emailBody = `
+        <h2>New Ad Request for Your Ad Space</h2>
+        <p>Hello,</p>
+        <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
+        <p><strong>Business Name:</strong> ${businessName}</p>
+        <p><strong>Description:</strong> ${adDescription}</p>
+      `;
+      await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
+    }
 
     res.status(201).json(savedRequestAd);
   } catch (error) {
@@ -726,6 +707,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
+
 
 exports.getAllAds = async (req, res) => {
   try {

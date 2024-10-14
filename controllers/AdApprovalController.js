@@ -26,3 +26,16 @@ exports.approveAd = async (req, res) => {
     res.status(500).json({ message: 'Error approving ad' });
   }
 };
+
+exports.getApprovedAds = async (req, res) => {
+  try {
+    const approvedAds = await ImportAd.find({ approved: true })
+      .populate('selectedSpaces')
+      .populate('selectedWebsites')
+      .populate('selectedCategories');
+
+    res.status(200).json(approvedAds);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching approved ads' });
+  }
+};
