@@ -268,6 +268,22 @@ exports.getSpaces = async (req, res) => {
   }
 };
 
+exports.getSpacesByOwner = async (req, res) => {
+  const { ownerId } = req.params;
+
+  try {
+    // Find spaces where the webOwnerEmail matches the owner's email
+    const spaces = await AdSpace.find({ webOwnerEmail: ownerId }).populate({
+      path: 'categoryId',
+      populate: { path: 'websiteId' }, // Populating the website for each category
+    });
+    res.status(200).json(spaces);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch ad spaces', error });
+  }
+};
+
+
 exports.getAdContent = async (req, res) => {
   try {
     const { space, category } = req.query;

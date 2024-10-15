@@ -1,10 +1,38 @@
 // AdApprovalController.js
 const ImportAd = require('../models/ImportAdModel');
+const AdSpace = require('../models/AdSpaceModel');
+const AdCategory = require('../models/AdCategoryModel');
+const Website = require('../models/WebsiteModel');
 
-// Route to get pending ads
+// exports.getPendingAds = async (req, res) => {
+//   try {
+//     const pendingAds = await ImportAd.find({ approved: false }).populate('selectedSpaces');
+//     res.status(200).json(pendingAds);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error fetching pending ads' });
+//   }
+// };
+
 exports.getPendingAds = async (req, res) => {
   try {
-    const pendingAds = await ImportAd.find({ approved: false }).populate('selectedSpaces');
+    const { ownerId } = req.params;  // Owner's ID will be passed in the request params or can be obtained from the authenticated user.
+
+    // Fetch the owner's websites, categories, and ad spaces
+    const websites = await Website.find({ ownerId });
+    const websiteIds = websites.map(website => website._id);
+
+    const categories = await AdCategory.find({ websiteId: { $in: websiteIds } });
+    const categoryIds = categories.map(category => category._id);
+
+    const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
+    const adSpaceIds = adSpaces.map(space => space._id);
+
+    // Fetch pending ads that belong to the owner's ad spaces
+    const pendingAds = await ImportAd.find({
+      approved: false,
+      selectedSpaces: { $in: adSpaceIds }
+    }).populate('selectedSpaces selectedCategories selectedWebsites');
+
     res.status(200).json(pendingAds);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching pending ads' });
@@ -39,3 +67,5 @@ exports.getApprovedAds = async (req, res) => {
     res.status(500).json({ message: 'Error fetching approved ads' });
   }
 };
+
+
