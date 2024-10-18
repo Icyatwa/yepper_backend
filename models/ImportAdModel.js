@@ -41,7 +41,7 @@
 // ImportAdModel.js
 const mongoose = require('mongoose');
 const importAdSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
+  userId: { type: String, required: true, index: true },
   imageUrl: { type: String },
   pdfUrl: { type: String },
   videoUrl: { type: String },

@@ -85,7 +85,6 @@
 //   }
 // };
 
-// AdCategoryController.js
 const AdCategory = require('../models/AdCategoryModel');
 
 exports.createCategory = async (req, res) => {
@@ -98,7 +97,7 @@ exports.createCategory = async (req, res) => {
 
     const newCategory = new AdCategory({
       ownerId,
-      websiteId,  // Associate the category with the website
+      websiteId,
       categoryName,
       description,
       price,
@@ -118,6 +117,8 @@ exports.getCategories = async (req, res) => {
 
   try {
     const categories = await AdCategory.find({ ownerId })
+      .lean()  // Return plain JavaScript objects
+      .select('categoryName description price websiteId createdAt')  // Fetch only necessary fields
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
@@ -140,6 +141,8 @@ exports.getCategoriesByWebsite = async (req, res) => {
 
   try {
     const categories = await AdCategory.find({ websiteId })
+      .lean()  // Return plain JavaScript objects
+      .select('categoryName description price ownerId createdAt')  // Fetch only necessary fields
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
@@ -160,7 +163,9 @@ exports.getCategoryById = async (req, res) => {
   const { categoryId } = req.params;
 
   try {
-    const category = await AdCategory.findById(categoryId);
+    const category = await AdCategory.findById(categoryId)
+      .lean()  // Use lean for fast loading
+      .select('categoryName description price websiteId ownerId customAttributes createdAt');  // Select only necessary fields
 
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });

@@ -708,7 +708,6 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
   }
 }];
 
-
 exports.getAllAds = async (req, res) => {
   try {
     const ads = await ImportAd.find();
@@ -720,30 +719,38 @@ exports.getAllAds = async (req, res) => {
 };
 
 exports.getAdByIds = async (req, res) => {
-  const adId = req.params.id;  // Fixing the parameter name
+  const adId = req.params.id;
 
   try {
-      const ad = await ImportAd.findById(adId);
-      if (!ad) {
-          return res.status(404).json({ message: 'Ad not found' });
-      }
-      res.status(200).json(ad);
+    const ad = await ImportAd.findById(adId)
+      .lean()  // Faster loading
+      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
+
+    if (!ad) {
+      return res.status(404).json({ message: 'Ad not found' });
+    }
+    res.status(200).json(ad);
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error('Error fetching ad by ID:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 exports.getAdsByUserId = async (req, res) => {
   const userId = req.params.userId;
+
   try {
-    const ads = await ImportAd.find({ userId });
-    if (!ads || ads.length === 0) {
+    const ads = await ImportAd.find({ userId })
+      .lean()  // Faster data retrieval
+      .select('businessName businessLocation adDescription approved');
+
+    if (!ads.length) {
       return res.status(404).json({ message: 'No ads found for this user' });
     }
-    res.status(200).json(ads); // Send the ads array directly
+
+    res.status(200).json(ads);
   } catch (error) {
-    console.error('Error fetching ad by user ID:', error);
+    console.error('Error fetching ads by user ID:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

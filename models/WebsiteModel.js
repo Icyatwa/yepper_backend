@@ -1,4 +1,4 @@
-// // WebsiteModel.js
+// WebsiteModel.js
 // const mongoose = require('mongoose');
 
 // const websiteSchema = new mongoose.Schema({
@@ -13,7 +13,6 @@
 
 // module.exports = mongoose.model('Website', websiteSchema);
 
-// WebsiteModel.js
 const mongoose = require('mongoose');
 
 const websiteSchema = new mongoose.Schema({
@@ -24,6 +23,6 @@ const websiteSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-websiteSchema.index({ ownerId: 1 });
+websiteSchema.index({ ownerId: 1 }); // Index for faster query by ownerId
 
 module.exports = mongoose.model('Website', websiteSchema);

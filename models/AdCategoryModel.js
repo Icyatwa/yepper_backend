@@ -23,7 +23,6 @@
 // module.exports = mongoose.model('AdCategory', adCategorySchema);
 
 
-// AdCategoryModel.js
 const mongoose = require('mongoose');
 
 const adCategorySchema = new mongoose.Schema({
@@ -46,4 +45,3 @@ adCategorySchema.virtual('adSpaces', {
 adCategorySchema.index({ ownerId: 1 }); // Adding an index for frequent queries
 
 module.exports = mongoose.model('AdCategory', adCategorySchema);
-
