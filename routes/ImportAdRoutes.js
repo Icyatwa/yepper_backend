@@ -25,6 +25,7 @@ router.post('/', importAdController.createImportAd);
 router.get('/', importAdController.getAllAds);
 router.get('/ad/:id', importAdController.getAdByIds);
 router.get('/ads/:userId', importAdController.getAdsByUserId);
+router.get('/projects/:userId', importAdController.getProjectsByUserId);
 router.get('/ads/:userId/with-clicks', importAdController.getAdsByUserIdWithClicks);
 
 module.exports = router;

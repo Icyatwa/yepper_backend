@@ -755,6 +755,28 @@ exports.getAdsByUserId = async (req, res) => {
   }
 };
 
+exports.getProjectsByUserId = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const approvedAds = await ImportAd.find({ userId, approved: true })
+      .lean()
+      .select('businessName businessLocation adDescription approved');
+      
+    const pendingAds = await ImportAd.find({ userId, approved: false })
+      .lean()
+      .select('businessName businessLocation adDescription approved');
+      
+    res.status(200).json({
+      approvedAds,
+      pendingAds
+    });
+  } catch (error) {
+    console.error('Error fetching ads by user ID:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 exports.getAdsByUserIdWithClicks = async (req, res) => {
   const userId = req.params.userId;
   try {
