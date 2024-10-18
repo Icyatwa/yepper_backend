@@ -73,7 +73,6 @@ adSpaceSchema.virtual('remainingUserCount').get(function () {
   return this.userCount - this.selectedAds.length;
 });
 
-
 adSpaceSchema.pre('validate', function (next) {
   if (
     (this.availability === 'Reserved for future date' || this.availability === 'Pick a date') &&

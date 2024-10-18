@@ -761,11 +761,17 @@ exports.getProjectsByUserId = async (req, res) => {
   try {
     const approvedAds = await ImportAd.find({ userId, approved: true })
       .lean()
-      .select('businessName businessLocation adDescription approved');
-      
+      .populate('selectedWebsites', 'websiteName websiteLink')
+      .populate('selectedCategories', 'categoryName description')
+      .populate('selectedSpaces', 'spaceType price availability')
+      .select('businessName businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
+
     const pendingAds = await ImportAd.find({ userId, approved: false })
       .lean()
-      .select('businessName businessLocation adDescription approved');
+      .populate('selectedWebsites', 'websiteName websiteLink')
+      .populate('selectedCategories', 'categoryName description')
+      .populate('selectedSpaces', 'spaceType price availability')
+      .select('businessName businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
       
     res.status(200).json({
       approvedAds,
@@ -776,6 +782,7 @@ exports.getProjectsByUserId = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 exports.getAdsByUserIdWithClicks = async (req, res) => {
   const userId = req.params.userId;
