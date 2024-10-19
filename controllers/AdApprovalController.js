@@ -39,11 +39,32 @@ exports.getPendingAds = async (req, res) => {
   }
 };
 
+// exports.approveAd = async (req, res) => {
+//   try {
+//     const { adId } = req.params;
+//     const updatedAd = await ImportAd.findByIdAndUpdate(adId, { approved: true }, { new: true });
+
+//     if (!updatedAd) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
+
+//     res.status(200).json({ message: 'Ad approved successfully', ad: updatedAd });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error approving ad' });
+//   }
+// };
 // Route to approve an ad
+
 exports.approveAd = async (req, res) => {
   try {
     const { adId } = req.params;
-    const updatedAd = await ImportAd.findByIdAndUpdate(adId, { approved: true }, { new: true });
+    const userId = req.user._id;  // Assuming the user's ID is available from authentication middleware
+
+    const updatedAd = await ImportAd.findByIdAndUpdate(
+      adId,
+      { approved: true, approvedBy: userId },  // Add the approvedBy field here
+      { new: true }
+    );
 
     if (!updatedAd) {
       return res.status(404).json({ message: 'Ad not found' });
@@ -68,4 +89,16 @@ exports.getApprovedAds = async (req, res) => {
   }
 };
 
+exports.getApprovedAdsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;  // Assuming userId is passed in the request params
+    const approvedAds = await ImportAd.find({ approved: true, approvedBy: userId })
+      .populate('selectedSpaces')
+      .populate('selectedWebsites')
+      .populate('selectedCategories');
 
+    res.status(200).json(approvedAds);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching approved ads' });
+  }
+};
