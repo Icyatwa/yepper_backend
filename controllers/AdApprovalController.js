@@ -39,32 +39,10 @@ exports.getPendingAds = async (req, res) => {
   }
 };
 
-// exports.approveAd = async (req, res) => {
-//   try {
-//     const { adId } = req.params;
-//     const updatedAd = await ImportAd.findByIdAndUpdate(adId, { approved: true }, { new: true });
-
-//     if (!updatedAd) {
-//       return res.status(404).json({ message: 'Ad not found' });
-//     }
-
-//     res.status(200).json({ message: 'Ad approved successfully', ad: updatedAd });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error approving ad' });
-//   }
-// };
-// Route to approve an ad
-
 exports.approveAd = async (req, res) => {
   try {
     const { adId } = req.params;
-    const userId = req.user._id;  // Assuming the user's ID is available from authentication middleware
-
-    const updatedAd = await ImportAd.findByIdAndUpdate(
-      adId,
-      { approved: true, approvedBy: userId },  // Add the approvedBy field here
-      { new: true }
-    );
+    const updatedAd = await ImportAd.findByIdAndUpdate(adId, { approved: true }, { new: true });
 
     if (!updatedAd) {
       return res.status(404).json({ message: 'Ad not found' });
@@ -75,6 +53,28 @@ exports.approveAd = async (req, res) => {
     res.status(500).json({ message: 'Error approving ad' });
   }
 };
+// Route to approve an ad
+
+// exports.approveAd = async (req, res) => {
+//   try {
+//     const { adId } = req.params;
+//     const userId = req.user._id;  // Assuming the user's ID is available from authentication middleware
+
+//     const updatedAd = await ImportAd.findByIdAndUpdate(
+//       adId,
+//       { approved: true, approvedBy: userId },  // Add the approvedBy field here
+//       { new: true }
+//     );
+
+//     if (!updatedAd) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
+
+//     res.status(200).json({ message: 'Ad approved successfully', ad: updatedAd });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error approving ad' });
+//   }
+// };
 
 exports.getApprovedAds = async (req, res) => {
   try {
