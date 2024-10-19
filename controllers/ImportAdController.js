@@ -783,7 +783,6 @@ exports.getProjectsByUserId = async (req, res) => {
   }
 };
 
-
 exports.getAdsByUserIdWithClicks = async (req, res) => {
   const userId = req.params.userId;
   try {

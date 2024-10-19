@@ -57,13 +57,23 @@ exports.getApprovedAds = async (req, res) => {
 
 exports.getApprovedAdsByUser = async (req, res) => {
   try {
-    const { userId } = req.params;  // Assuming userId is passed in the request params
-    const approvedAds = await ImportAd.find({ approved: true, approvedBy: userId })
-      .populate('selectedSpaces selectedWebsites selectedCategories');
+    const { ownerId } = req.params;  // Owner's ID from params
 
-    if (!approvedAds || approvedAds.length === 0) {
-      return res.status(404).json({ message: 'No approved ads found for this user' });
-    }
+    // Fetch the owner's websites, categories, and ad spaces
+    const websites = await Website.find({ ownerId });
+    const websiteIds = websites.map(website => website._id);
+
+    const categories = await AdCategory.find({ websiteId: { $in: websiteIds } });
+    const categoryIds = categories.map(category => category._id);
+
+    const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
+    const adSpaceIds = adSpaces.map(space => space._id);
+
+    // Fetch approved ads that belong to the owner's ad spaces
+    const approvedAds = await ImportAd.find({
+      approved: true,
+      selectedSpaces: { $in: adSpaceIds }
+    }).populate('selectedSpaces selectedCategories selectedWebsites');
 
     res.status(200).json(approvedAds);
   } catch (error) {
