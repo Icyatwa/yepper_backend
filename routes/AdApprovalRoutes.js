@@ -6,7 +6,7 @@ const adApprovalController = require('../controllers/AdApprovalController');
 // router.get('/pending', adApprovalController.getPendingAds);
 router.get('/pending/:ownerId', adApprovalController.getPendingAds);
 router.put('/approve/:adId', adApprovalController.approveAd);
+router.get('/approved/:userId', adApprovalController.getApprovedAdsByUser);
 router.get('/approved-ads', adApprovalController.getApprovedAds);
-router.get('/approved-ads/:userId', adApprovalController.getApprovedAdsByUser);
 
 module.exports = router;
