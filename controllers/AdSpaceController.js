@@ -169,35 +169,112 @@ const AdSpace = require('../models/AdSpaceModel');
 const AdCategory = require('../models/AdCategoryModel');
 const ImportAd = require('../models/ImportAdModel');
 
+// const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDate = null, endDate = null) => {
+//   const apiUrl = `https://yepper-backend.onrender.com/api/ads/display?space=${spaceId}&website=${websiteId}&category=${categoryId}`;
+
+//   const dateCheckScript = startDate && endDate
+//     ? `
+//       const now = new Date();
+//       const start = new Date("${startDate}");
+//       const end = new Date("${endDate}");
+//       if (now >= start && now <= end) {
+//         var ad = document.createElement('script');
+//         ad.src = "${apiUrl}";
+//         document.getElementById("${spaceId}-ad").appendChild(ad);
+//       }
+//     `
+//     : `
+//       var ad = document.createElement('script');
+//       ad.src = "${apiUrl}";
+//       document.getElementById("${spaceId}-ad").appendChild(ad);
+//     `;
+
+//   const apiCodes = {
+//     HTML: `<script src="${apiUrl}"></script>`,
+//     JavaScript: `<script>
+//                   (function() {
+//                     ${dateCheckScript}
+//                   })();
+//                 </script>`,
+//     PHP: `<?php echo '<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>'; ?>`,
+//     Python: `print('<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>')`,
+//   };
+
+//   return apiCodes;
+// };
+
 const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDate = null, endDate = null) => {
   const apiUrl = `https://yepper-backend.onrender.com/api/ads/display?space=${spaceId}&website=${websiteId}&category=${categoryId}`;
 
   const dateCheckScript = startDate && endDate
-    ? `
-      const now = new Date();
-      const start = new Date("${startDate}");
-      const end = new Date("${endDate}");
-      if (now >= start && now <= end) {
-        var ad = document.createElement('script');
-        ad.src = "${apiUrl}";
-        document.getElementById("${spaceId}-ad").appendChild(ad);
-      }
-    `
-    : `
-      var ad = document.createElement('script');
-      ad.src = "${apiUrl}";
-      document.getElementById("${spaceId}-ad").appendChild(ad);
-    `;
+    ? `const now = new Date();
+       const start = new Date("${startDate}");
+       const end = new Date("${endDate}");
+       if (now >= start && now <= end) {
+         loadAd();
+       }`
+    : 'loadAd();'; // Default if no start and end date
+
+  const rotationScript = `
+    const rotateAds = (ads) => {
+      let currentIndex = 0;
+      ads[currentIndex].style.display = 'block';
+      
+      setInterval(() => {
+        ads[currentIndex].style.display = 'none';
+        currentIndex = (currentIndex + 1) % ads.length;
+        ads[currentIndex].style.display = 'block';
+      }, 5000); // Rotate every 5 seconds
+    };
+
+    const loadAd = () => {
+      const adContainer = document.getElementById("${spaceId}-ad");
+      fetch("${apiUrl}")
+        .then(response => response.text())
+        .then(adsHtml => {
+          adContainer.innerHTML = adsHtml;
+          const ads = adContainer.querySelectorAll('.ad');
+          if (ads.length > 0) {
+            rotateAds(ads); // Start rotating ads
+          }
+        })
+        .catch(error => {
+          console.error('Error loading ads:', error);
+          adContainer.innerHTML = '<p>Error loading ads</p>';
+        });
+    };
+
+    ${dateCheckScript}
+  `;
 
   const apiCodes = {
-    HTML: `<script src="${apiUrl}"></script>`,
-    JavaScript: `<script>
-                  (function() {
-                    ${dateCheckScript}
-                  })();
-                </script>`,
-    PHP: `<?php echo '<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>'; ?>`,
-    Python: `print('<div id="${spaceId}-ad"><script src="${apiUrl}"></script></div>')`,
+    HTML: `
+      <div id="${spaceId}-ad"></div>
+      <script>
+        ${rotationScript}
+      </script>`,
+      
+    JavaScript: `
+      <div id="${spaceId}-ad"></div>
+      <script>
+        (function() {
+          ${rotationScript}
+        })();
+      </script>`,
+      
+    PHP: `
+      <div id="${spaceId}-ad"></div>
+      <script>
+        <?php echo "${rotationScript}"; ?>
+      </script>`,
+
+    Python: `
+      print('''
+      <div id="${spaceId}-ad"></div>
+      <script>
+        ${rotationScript}
+      </script>
+      ''')`,
   };
 
   return apiCodes;
