@@ -1,3 +1,4 @@
+// AdApprovalController.js
 const ImportAd = require('../models/ImportAdModel');
 const AdSpace = require('../models/AdSpaceModel');
 const AdCategory = require('../models/AdCategoryModel');

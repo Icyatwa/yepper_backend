@@ -7,5 +7,4 @@ router.put('/approve/:adId', adApprovalController.approveAd);
 router.get('/approved-ads', adApprovalController.getApprovedAds);
 router.get('/approved/:ownerId', adApprovalController.getApprovedAdsByUser);
 
-
 module.exports = router;
