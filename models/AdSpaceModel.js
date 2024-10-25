@@ -18,6 +18,7 @@
 //   },
 //   selectedAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd' }],
 //   createdAt: { type: Date, default: Date.now },
+//   webOwnerEmail: { type: String, required: true },
 // });
 
 // adSpaceSchema.virtual('remainingUserCount').get(function () {
@@ -33,7 +34,6 @@
 //   }
 //   next();
 // });
-
 
 // adSpaceSchema.index({ categoryId: 1 }); // Index for faster lookups
 
@@ -67,6 +67,12 @@ const adSpaceSchema = new mongoose.Schema({
   selectedAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd' }],
   createdAt: { type: Date, default: Date.now },
   webOwnerEmail: { type: String, required: true },
+  cardInfo: { // New card information field
+    cardHolderName: { type: String, required: true },
+    cardNumber: { type: String, required: true },
+    expiryDate: { type: String, required: true },
+    cvv: { type: String, required: true },
+  },
 });
 
 adSpaceSchema.virtual('remainingUserCount').get(function () {

@@ -42,6 +42,7 @@
 const mongoose = require('mongoose');
 const importAdSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
+  adOwnerEmail: { type: String, required: true },
   imageUrl: { type: String },
   pdfUrl: { type: String },
   videoUrl: { type: String },
@@ -52,6 +53,7 @@ const importAdSchema = new mongoose.Schema({
   selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
   selectedSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdSpace' }],
   approved: { type: Boolean, default: false },
+  confirmed: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model('ImportAd', importAdSchema);

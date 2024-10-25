@@ -602,6 +602,8 @@
 // };
 
 
+
+// ImportAdController.js
 const ImportAd = require('../models/ImportAdModel');
 const AdSpace = require('../models/AdSpaceModel');
 const multer = require('multer');
@@ -629,12 +631,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
     const {
       userId,
+      adOwnerEmail,
       businessName,
       businessLocation,
       adDescription,
       selectedWebsites,
       selectedCategories,
-      selectedSpaces
+      selectedSpaces,
     } = req.body;
 
     // Parse JSON strings
@@ -667,6 +670,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     // Create ImportAd entry
     const newRequestAd = new ImportAd({
       userId,
+      adOwnerEmail,
       imageUrl,
       pdfUrl,
       videoUrl,
@@ -675,7 +679,9 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       adDescription,
       selectedWebsites: websitesArray,
       selectedCategories: categoriesArray,
-      selectedSpaces: spacesArray
+      selectedSpaces: spacesArray,
+      approved: false,
+      confirmed: false
     });
 
     const savedRequestAd = await newRequestAd.save();
@@ -689,17 +695,17 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       { $push: { selectedAds: savedRequestAd._id } }
     );
 
-    // Notify each web owner via email
-    for (const space of adSpaces) {
-      const emailBody = `
-        <h2>New Ad Request for Your Ad Space</h2>
-        <p>Hello,</p>
-        <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
-        <p><strong>Business Name:</strong> ${businessName}</p>
-        <p><strong>Description:</strong> ${adDescription}</p>
-      `;
-      await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
-    }
+    // // Notify each web owner via email
+    // for (const space of adSpaces) {
+    //   const emailBody = `
+    //     <h2>New Ad Request for Your Ad Space</h2>
+    //     <p>Hello,</p>
+    //     <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
+    //     <p><strong>Business Name:</strong> ${businessName}</p>
+    //     <p><strong>Description:</strong> ${adDescription}</p>
+    //   `;
+    //   await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
+    // }
 
     res.status(201).json(savedRequestAd);
   } catch (error) {
