@@ -120,6 +120,7 @@ exports.approveAd = async (req, res) => {
   try {
     const { adId } = req.params;
 
+    // Only update the approved status, don't push to API yet
     const approvedAd = await ImportAd.findByIdAndUpdate(
       adId,
       { approved: true },
@@ -130,10 +131,13 @@ exports.approveAd = async (req, res) => {
       return res.status(404).json({ message: 'Ad not found' });
     }
 
-    // Notify the ad owner (you might replace this with an actual email service or notification)
+    // Notify the ad owner about approval (implement your notification system here)
     console.log(`Notification: Ad for ${approvedAd.businessName} has been approved. Awaiting confirmation from the ad owner.`);
 
-    res.status(200).json({ message: 'Ad approved and notification sent to ad owner' });
+    res.status(200).json({ 
+      message: 'Ad approved successfully. Waiting for advertiser confirmation.',
+      ad: approvedAd 
+    });
 
   } catch (error) {
     console.error('Error approving ad:', error);
@@ -144,42 +148,67 @@ exports.approveAd = async (req, res) => {
 exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
   const { userId } = req.params;
   try {
-    const allAds = await ImportAd.find({});
-    allAds.forEach(ad => console.log(`Ad ID: ${ad._id}, User ID: ${ad.userId}, Approved: ${ad.approved}, Confirmed: ${ad.confirmed}`));
-    
-    const approvedAds = await ImportAd.find({ userId, approved: true, confirmed: false });
-    console.log('Filtered Ads awaiting confirmation:', approvedAds); // Log the ads found
+    // Find ads that are approved but not yet confirmed
+    const approvedAds = await ImportAd.find({ 
+      userId, 
+      approved: true, 
+      confirmed: false 
+    }).populate('selectedSpaces');
     
     res.status(200).json(approvedAds);
   } catch (error) {
     console.error('Error fetching approved ads awaiting confirmation:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
-};
+}
 
 exports.confirmAdDisplay = async (req, res) => {
   try {
     const { adId } = req.params;
 
+    // First, find and update the ad's confirmation status
     const confirmedAd = await ImportAd.findByIdAndUpdate(
       adId,
       { confirmed: true },
       { new: true }
-    );
+    ).populate('selectedSpaces');
 
     if (!confirmedAd) {
-      return res.status(404).json({ message: 'Ad not found or already confirmed' });
+      return res.status(404).json({ message: 'Ad not found' });
     }
 
-    // Update the ad to be pushed to the selected ad spaces' APIs
-    const adSpaces = await AdSpace.find({ _id: { $in: confirmedAd.selectedSpaces } });
-
-    adSpaces.forEach(space => {
-      console.log(`Notification: Ad is now live on the API endpoint for space ID: ${space._id}`);
-      // Optionally, push to the actual API code or endpoint here if needed
+    // Now that the ad is confirmed, update all selected ad spaces to include this ad
+    const spaceUpdates = confirmedAd.selectedSpaces.map(async (spaceId) => {
+      return AdSpace.findByIdAndUpdate(
+        spaceId,
+        { 
+          $push: { 
+            activeAds: {
+              adId: confirmedAd._id,
+              imageUrl: confirmedAd.imageUrl,
+              pdfUrl: confirmedAd.pdfUrl,
+              videoUrl: confirmedAd.videoUrl,
+              businessName: confirmedAd.businessName,
+              adDescription: confirmedAd.adDescription
+            }
+          }
+        },
+        { new: true }
+      );
     });
 
-    res.status(200).json({ message: 'Ad confirmed and now live on selected spaces' });
+    await Promise.all(spaceUpdates);
+
+    // Notify that the ad is now live
+    confirmedAd.selectedSpaces.forEach(space => {
+      console.log(`Ad is now live on space ID: ${space._id}`);
+    });
+
+    res.status(200).json({ 
+      message: 'Ad confirmed and now live on selected spaces',
+      ad: confirmedAd
+    });
+
   } catch (error) {
     console.error('Error confirming ad display:', error);
     res.status(500).json({ message: 'Internal Server Error' });

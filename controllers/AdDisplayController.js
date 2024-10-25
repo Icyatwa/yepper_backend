@@ -61,9 +61,9 @@ exports.displayAd = async (req, res) => {
     const { space, website, category } = req.query;
     const adSpace = await AdSpace.findById(space).populate({
       path: 'selectedAds',
-      match: { approved: true }, // Only retrieve approved ads
+      match: { approved: true, confirmed: true }, // Only retrieve ads that are both approved and confirmed
     });
-    
+
     if (!adSpace || adSpace.selectedAds.length === 0) {
       return res.status(404).send('No ads available for this space');
     }
@@ -99,4 +99,3 @@ exports.displayAd = async (req, res) => {
     res.status(500).send(error.message);
   }
 };
-
