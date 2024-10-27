@@ -73,16 +73,6 @@ const adSpaceSchema = new mongoose.Schema({
     expiryDate: { type: String, required: true },
     cvv: { type: String, required: true },
   },
-
-  activeAds: [{
-    adId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd' },
-    imageUrl: String,
-    pdfUrl: String,
-    videoUrl: String,
-    businessName: String,
-    adDescription: String,
-    addedAt: { type: Date, default: Date.now }
-  }]
 });
 
 adSpaceSchema.virtual('remainingUserCount').get(function () {
