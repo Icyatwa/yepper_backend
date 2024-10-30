@@ -8,12 +8,3 @@
 // router.get('/callback', paymentController.paymentCallback);
 
 // module.exports = router;
-
-const express = require('express');
-const router = express.Router();
-const PaymentController = require('../controllers/PaymentController');
-
-router.post('/create', PaymentController.processPayment);
-router.post('/confirm', PaymentController.confirmPayment);
-
-module.exports = router;

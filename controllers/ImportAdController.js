@@ -456,150 +456,18 @@
 
 
 
-// const ImportAd = require('../models/ImportAdModel');
-// const AdSpace = require('../models/AdSpaceModel');
-// const multer = require('multer');
-// const sharp = require('sharp');
-// const path = require('path');
-// const fs = require('fs');
 
-// const storage = multer.memoryStorage();
-// const upload = multer({
-//   storage: storage,
-//   fileFilter: (req, file, cb) => {
-//     const fileTypes = /jpeg|jpg|png|pdf|mp4/;
-//     const mimeType = fileTypes.test(file.mimetype);
-//     const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
 
-//     if (mimeType && extname) {
-//       return cb(null, true);
-//     }
-//     cb(new Error('Invalid file type'));
-//   }
-// });
 
-// exports.createImportAd = [upload.single('file'), async (req, res) => {
-//   try {
-//     const {
-//       userId,
-//       businessName,
-//       businessLocation,
-//       adDescription,
-//       selectedWebsites,
-//       selectedCategories,
-//       selectedSpaces
-//     } = req.body;
 
-//     // Parse JSON strings
-//     const websitesArray = JSON.parse(selectedWebsites);
-//     const categoriesArray = JSON.parse(selectedCategories);
-//     const spacesArray = JSON.parse(selectedSpaces);
 
-//     let imageUrl = '';
-//     let pdfUrl = '';
-//     let videoUrl = '';
 
-//     // Process uploaded file
-//     if (req.file) {
-//       const fileName = `${Date.now()}-${req.file.originalname}`;
-//       const filePath = path.join(__dirname, '../uploads', fileName);
 
-//       if (req.file.mimetype.startsWith('image')) {
-//         await sharp(req.file.buffer).resize(300, 300).toFile(filePath);
-//         imageUrl = `/uploads/${fileName}`;
-//       } else {
-//         await fs.promises.writeFile(filePath, req.file.buffer);
-//         if (req.file.mimetype === 'application/pdf') {
-//           pdfUrl = `/uploads/${fileName}`;
-//         } else if (req.file.mimetype.startsWith('video')) {
-//           videoUrl = `/uploads/${fileName}`;
-//         }
-//       }
-//     }
 
-//     // Create ImportAd entry
-//     const newRequestAd = new ImportAd({
-//       userId,
-//       imageUrl,
-//       pdfUrl,
-//       videoUrl,
-//       businessName,
-//       businessLocation,
-//       adDescription,
-//       selectedWebsites: websitesArray,
-//       selectedCategories: categoriesArray,
-//       selectedSpaces: spacesArray
-//     });
 
-//     const savedRequestAd = await newRequestAd.save();
-    
-//     // Push this ad to the selected spaces
-//     await AdSpace.updateMany(
-//       { _id: { $in: spacesArray } }, 
-//       { $push: { selectedAds: savedRequestAd._id } }
-//     );
 
-//     res.status(201).json(savedRequestAd);
-//   } catch (error) {
-//     console.error('Error importing ad:', error);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// }];
 
-// exports.getAllAds = async (req, res) => {
-//   try {
-//     const ads = await ImportAd.find();
-//     res.status(200).json(ads);
-//   } catch (error) {
-//     console.error('Error fetching ads:', error);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
 
-// exports.getAdByIds = async (req, res) => {
-//   const adId = req.params.id;  // Fixing the parameter name
-
-//   try {
-//       const ad = await ImportAd.findById(adId);
-//       if (!ad) {
-//           return res.status(404).json({ message: 'Ad not found' });
-//       }
-//       res.status(200).json(ad);
-//   } catch (error) {
-//       console.error(error);
-//       res.status(500).json({ message: 'Internal server error' });
-//   }
-// }
-
-// exports.getAdsByUserId = async (req, res) => {
-//   const userId = req.params.userId;
-//   try {
-//     const ads = await ImportAd.find({ userId });
-//     if (!ads || ads.length === 0) {
-//       return res.status(404).json({ message: 'No ads found for this user' });
-//     }
-//     res.status(200).json(ads); // Send the ads array directly
-//   } catch (error) {
-//     console.error('Error fetching ad by user ID:', error);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
-
-// exports.getAdsByUserIdWithClicks = async (req, res) => {
-//   const userId = req.params.userId;
-//   try {
-//     const ads = await ImportAd.find({ userId });
-//     for (const ad of ads) {
-//       const clicks = await AdClick.find({ adId: ad._id }).exec();
-//       ad.clicks = clicks.length;
-//       ad.websites = [...new Set(clicks.map(click => click.website))]; // Unique websites
-//     }
-//     res.status(200).json(ads);
-//   } catch (error) {
-//     console.error('Error fetching ads with clicks:', error);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
 
 
 
@@ -695,17 +563,17 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       { $push: { selectedAds: savedRequestAd._id } }
     );
 
-    // // Notify each web owner via email
-    // for (const space of adSpaces) {
-    //   const emailBody = `
-    //     <h2>New Ad Request for Your Ad Space</h2>
-    //     <p>Hello,</p>
-    //     <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
-    //     <p><strong>Business Name:</strong> ${businessName}</p>
-    //     <p><strong>Description:</strong> ${adDescription}</p>
-    //   `;
-    //   await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
-    // }
+    // Notify each web owner via email
+    for (const space of adSpaces) {
+      const emailBody = `
+        <h2>New Ad Request for Your Ad Space</h2>
+        <p>Hello,</p>
+        <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
+        <p><strong>Business Name:</strong> ${businessName}</p>
+        <p><strong>Description:</strong> ${adDescription}</p>
+      `;
+      await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
+    }
 
     res.status(201).json(savedRequestAd);
   } catch (error) {
