@@ -10,5 +10,6 @@ router.post('/initiate-payment', adApprovalController.initiateAdPayment);
 router.get('/callback', adApprovalController.adPaymentCallback);
 router.get('/approved-ads', adApprovalController.getApprovedAds);
 router.get('/approved/:ownerId', adApprovalController.getApprovedAdsByUser);
+router.get('/user-pending/:userId', adApprovalController.getUserPendingAds);
 
 module.exports = router;

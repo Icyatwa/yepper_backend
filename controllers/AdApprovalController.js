@@ -263,85 +263,6 @@ exports.initiateAdPayment = async (req, res) => {
   }
 };
 
-// exports.initiateAdPayment = async (req, res) => {
-//   console.log('Received initiate-payment request:', req.body);
-
-//   try {
-//     const { adId, amount, email, phoneNumber, userId } = req.body;
-
-//     // Validate required fields
-//     if (!adId || !amount || isNaN(amount) || amount <= 0 || !email || !phoneNumber || !userId) {
-//       return res.status(400).json({ message: 'Required fields are missing or invalid.' });
-//     }
-
-//     const tx_ref = 'ADPAY-' + Date.now();
-
-//     try {
-//       const payment = new Payment({
-//         tx_ref,
-//         amount,
-//         currency: 'RWF',
-//         email,
-//         phoneNumber,
-//         userId,
-//         adId,
-//         status: 'pending'
-//       });
-//       await payment.save();
-//       console.log('Payment record created successfully:', payment);
-//     } catch (error) {
-//       console.error('Error saving payment record:', error);
-//       return res.status(500).json({ message: 'Error saving payment record', error });
-//     }
-
-//     // Set up mobile money payment payload
-//     const paymentPayload = {
-//       tx_ref,
-//       amount,
-//       currency: 'RWF', // Specify the currency as Rwandan Francs
-//       redirect_url: 'http://localhost:5000/api/accept/callback',
-//       customer: {
-//         email: email,
-//         phonenumber: phoneNumber,
-//       },
-//       payment_options: 'mobilemoney', // Set to 'mobilemoney' for MoMo payments
-//       mobilemoney: {
-//         phone_number: phoneNumber,
-//         provider: 'MTN', // Replace 'MTN' with the relevant provider in your region
-//         country: 'RW', // Rwanda
-//       },
-//       customizations: {
-//         title: 'Ad Payment',
-//         description: 'Confirm and pay for your ad display',
-//       },
-//     };
-
-//     // Initiate payment with Flutterwave
-//     try {
-//       const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
-//         headers: {
-//           Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-//           'Content-Type': 'application/json',
-//         },
-//       });
-
-//       if (response.data && response.data.data && response.data.data.link) {
-//         console.log('Payment link generated successfully:', response.data.data.link);
-//         return res.status(200).json({ paymentLink: response.data.data.link });
-//       } else {
-//         console.error('Failed to generate payment link:', response.data);
-//         return res.status(500).json({ message: 'Payment initiation failed', error: response.data });
-//       }
-//     } catch (error) {
-//       console.error('Error with Flutterwave payment initiation:', error.response?.data || error.message);
-//       return res.status(500).json({ message: 'Error initiating payment with Flutterwave', error: error.response?.data || error.message });
-//     }
-//   } catch (error) {
-//     console.error('Unexpected error in initiateAdPayment:', error);
-//     res.status(500).json({ message: 'Unexpected error in payment initiation', error });
-//   }
-// };
-
 exports.adPaymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
@@ -374,7 +295,6 @@ exports.adPaymentCallback = async (req, res) => {
     res.status(500).json({ message: 'Payment verification failed', error });
   }
 };
-
 
 exports.getApprovedAds = async (req, res) => {
   try {
@@ -410,5 +330,22 @@ exports.getApprovedAdsByUser = async (req, res) => {
     res.status(200).json(approvedAds);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching approved ads' });
+  }
+};
+
+exports.getUserPendingAds = async (req, res) => {
+  try {
+    const { userId } = req.params; // Importer's ID from params
+
+    // Fetch pending ads imported by this user
+    const pendingAds = await ImportAd.find({
+      userId,
+      approved: false
+    }).populate('selectedSpaces selectedCategories selectedWebsites');
+
+    res.status(200).json(pendingAds);
+  } catch (error) {
+    console.error('Error fetching user’s pending ads:', error);
+    res.status(500).json({ message: 'Error fetching user’s pending ads' });
   }
 };
