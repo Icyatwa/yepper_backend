@@ -1,81 +1,55 @@
-// WebsiteController.js
-exports.createWebsite = async (req, res) => {
-  try {
-    const { ownerId, websiteName, websiteLink, logoUrl } = req.body;
+// ImportAdModel.js
+const mongoose = require('mongoose');
+const importAdSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
+  adOwnerEmail: { type: String, required: true },
+  imageUrl: { type: String },
+  pdfUrl: { type: String },
+  videoUrl: { type: String },
+  businessName: { type: String, required: true },
+  businessLocation: { type: String, required: true },
+  adDescription: { type: String, required: true },
+  selectedWebsites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Website' }],
+  selectedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
+  selectedSpaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdSpace' }],
+  approved: { type: Boolean, default: false },
+  confirmed: { type: Boolean, default: false },
+});
 
-    // Check if website URL is already in use
-    const existingWebsite = await Website.findOne({ websiteLink }).lean();
-    if (existingWebsite) {
-      return res.status(409).json({ message: 'Website URL already exists' });
-    }
-
-    const newWebsite = new Website({
-      ownerId,
-      websiteName,
-      websiteLink,
-      logoUrl
-    });
-
-    const savedWebsite = await newWebsite.save();
-    res.status(201).json(savedWebsite);
-  }
-};
-
-// AdCategoryController.js
-exports.createCategory = async (req, res) => {
-  try {
-    const { ownerId, websiteId, categoryName, description, price, customAttributes } = req.body;
-
-    const newCategory = new AdCategory({
-      ownerId,
-      websiteId,
-      categoryName,
-      description,
-      price,
-      customAttributes: customAttributes || {}
-    });
-
-    const savedCategory = await newCategory.save();
-    res.status(201).json(savedCategory);
-  }
-};
-
-// AdSpaceController.js
-exports.createSpace = async (req, res) => {
-  try {
-    const { categoryId, spaceType, price, availability, userCount, instructions, startDate, endDate, webOwnerEmail, cardInfo } = req.body;
-    const category = await AdCategory.findById(categoryId).populate('websiteId');
-    const websiteId = category.websiteId._id;
-
-    // Create new AdSpace
-    const newSpace = new AdSpace({
-      categoryId,
-      spaceType,
-      price,
-      availability,
-      userCount,
-      instructions,
-      startDate,
-      endDate,
-      webOwnerEmail,
-      cardInfo,  // Adding cardInfo in AdSpace creation
-    });
-    const savedSpace = await newSpace.save();
-
-    // Generate API codes
-    const apiCodes = generateApiCodesForAllLanguages(savedSpace._id, websiteId, categoryId, startDate, endDate);
-    savedSpace.apiCodes = apiCodes;
-    await savedSpace.save();
-
-    res.status(201).json(savedSpace);
-  }
-};
+module.exports = mongoose.model('ImportAd', importAdSchema);
 
 // ImportAdController.js
+const ImportAd = require('../models/ImportAdModel');
+const AdSpace = require('../models/AdSpaceModel');
+const multer = require('multer');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
+const sendEmailNotification = require('./emailService');
+
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|pdf|mp4/;
+    const mimeType = fileTypes.test(file.mimetype);
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimeType && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type'));
+  }
+});
+
 exports.createImportAd = [upload.single('file'), async (req, res) => {
   try {
     const {
       userId,
+      adOwnerEmail,
+      businessName,
+      businessLocation,
+      adDescription,
       selectedWebsites,
       selectedCategories,
       selectedSpaces,
@@ -86,9 +60,38 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     const categoriesArray = JSON.parse(selectedCategories);
     const spacesArray = JSON.parse(selectedSpaces);
 
+    let imageUrl = '';
+    let pdfUrl = '';
+    let videoUrl = '';
+
+    // Process uploaded file
+    if (req.file) {
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const filePath = path.join(__dirname, '../uploads', fileName);
+
+      if (req.file.mimetype.startsWith('image')) {
+        await sharp(req.file.buffer).resize(300, 300).toFile(filePath);
+        imageUrl = `/uploads/${fileName}`;
+      } else {
+        await fs.promises.writeFile(filePath, req.file.buffer);
+        if (req.file.mimetype === 'application/pdf') {
+          pdfUrl = `/uploads/${fileName}`;
+        } else if (req.file.mimetype.startsWith('video')) {
+          videoUrl = `/uploads/${fileName}`;
+        }
+      }
+    }
+
     // Create ImportAd entry
     const newRequestAd = new ImportAd({
       userId,
+      adOwnerEmail,
+      imageUrl,
+      pdfUrl,
+      videoUrl,
+      businessName,
+      businessLocation,
+      adDescription,
       selectedWebsites: websitesArray,
       selectedCategories: categoriesArray,
       selectedSpaces: spacesArray,
@@ -107,242 +110,213 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       { $push: { selectedAds: savedRequestAd._id } }
     );
 
+    // Notify each web owner via email
+    for (const space of adSpaces) {
+      const emailBody = `
+        <h2>New Ad Request for Your Ad Space</h2>
+        <p>Hello,</p>
+        <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
+        <p><strong>Business Name:</strong> ${businessName}</p>
+        <p><strong>Description:</strong> ${adDescription}</p>
+      `;
+      await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
+    }
+
     res.status(201).json(savedRequestAd);
+  } catch (error) {
+    console.error('Error importing ad:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 }];
 
-// PaymentController.js
-const createOrder = async (price, webOwnerEmail) => {
-  const fetch = (await import('node-fetch')).default;
-  
-  const totalAmount = price;
-  const platformFee = parseFloat((price * 0.05).toFixed(2));
-  const payeeAmount = (totalAmount - platformFee).toFixed(2);
+exports.getAllAds = async (req, res) => {
+  try {
+    const ads = await ImportAd.find();
+    res.status(200).json(ads);
+  } catch (error) {
+    console.error('Error fetching ads:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
 
-  const order = await fetch(`${process.env.PAYPAL_API}/v2/checkout/orders`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64')}`
-    },
-    body: JSON.stringify({
-      intent: 'CAPTURE',
-      purchase_units: [{
-        amount: { currency_code: 'USD', value: totalAmount },
-        payee: { email_address: webOwnerEmail },
-        payment_instruction: {
-          platform_fees: [{ amount: { currency_code: 'USD', value: platformFee } }]
+exports.getAdByIds = async (req, res) => {
+  const adId = req.params.id;
+
+  try {
+    const ad = await ImportAd.findById(adId)
+      .lean()  // Faster loading
+      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
+
+    if (!ad) {
+      return res.status(404).json({ message: 'Ad not found' });
+    }
+    res.status(200).json(ad);
+  } catch (error) {
+    console.error('Error fetching ad by ID:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getAdsByUserId = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const ads = await ImportAd.find({ userId })
+      .lean()  // Faster data retrieval
+      .select('businessName businessLocation adDescription approved');
+
+    if (!ads.length) {
+      return res.status(404).json({ message: 'No ads found for this user' });
+    }
+
+    res.status(200).json(ads);
+  } catch (error) {
+    console.error('Error fetching ads by user ID:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+exports.getProjectsByUserId = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const approvedAds = await ImportAd.find({ userId, approved: true })
+      .lean()
+      .populate('selectedWebsites', 'websiteName websiteLink')
+      .populate('selectedCategories', 'categoryName description')
+      .populate('selectedSpaces', 'spaceType price availability')
+      .select('businessName businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
+
+    const pendingAds = await ImportAd.find({ userId, approved: false })
+      .lean()
+      .populate('selectedWebsites', 'websiteName websiteLink')
+      .populate('selectedCategories', 'categoryName description')
+      .populate('selectedSpaces', 'spaceType price availability')
+      .select('businessName businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
+      
+    res.status(200).json({
+      approvedAds,
+      pendingAds
+    });
+  } catch (error) {
+    console.error('Error fetching ads by user ID:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// ImportAdRoutes.js
+const express = require('express');
+const router = express.Router();
+const importAdController = require('../controllers/ImportAdController');
+
+router.post('/', importAdController.createImportAd);
+router.get('/', importAdController.getAllAds);
+router.get('/ad/:id', importAdController.getAdByIds);
+router.get('/ads/:userId', importAdController.getAdsByUserId);
+router.get('/projects/:userId', importAdController.getProjectsByUserId);
+
+module.exports = router;
+
+// PendingAds.js
+import React, { useState, useEffect } from "react";
+import { useClerk } from '@clerk/clerk-react';
+import './PendingAds.css';
+
+function PendingAds() {
+    const { user } = useClerk();
+    const [pendingAds, setPendingAds] = useState([]);
+    const [selectedAd, setSelectedAd] = useState(null);
+
+    useEffect(() => {
+        const fetchAds = async () => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/importAds/projects/${user.id}`);
+            const data = await response.json();
+            setPendingAds(data.pendingAds);
+        } catch (error) {
+            console.error('Error fetching ads:', error);
         }
-      }]
-    })
-  });
+        };
 
-  const data = await order.json();
-  return data;
-};
+        fetchAds();
+    }, [user]);
 
-const capturePayment = async (orderId) => {
-  const fetch = (await import('node-fetch')).default;
-
-  const capture = await fetch(`${process.env.PAYPAL_API}/v2/checkout/orders/${orderId}/capture`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64')}`
-    }
-  });
-
-  const data = await capture.json();
-  return data;
-};
-
-// Exporting functions remains the same
-exports.processPayment = async (req, res) => {
-  const { adId, adSpaceId, price, webOwnerEmail } = req.body;
-
-  try {
-    const order = await createOrder(price, webOwnerEmail);
-
-    if (order.status === 'CREATED') {
-      res.status(201).json({ orderID: order.id });
-    } else {
-      res.status(500).json({ message: 'Order creation failed' });
-    }
-  }
-};
-
-exports.confirmPayment = async (req, res) => {
-  const { orderID, adId } = req.body;
-
-  try {
-    const capture = await capturePayment(orderID);
-
-    if (capture.status === 'COMPLETED') {
-      await ImportAd.findByIdAndUpdate(adId, { confirmed: true });
-      res.status(200).json({ message: 'Payment successful and ad confirmed' });
-    } else {
-      res.status(400).json({ message: 'Payment failed' });
-    }
-  }
-};
-
-// AdApprovalController.js
-exports.confirmAdDisplay = async (adId, adSpaceId, price) => {
-  try {
-    // 1. Create Order
-    const createOrderResponse = await fetch('http://localhost:5000/api/payment/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adId, adSpaceId, price })
-    });
-    const orderData = await createOrderResponse.json();
-
-    if (!orderData.orderID) throw new Error('Order creation failed');
-
-    // 2. Redirect to PayPal for approval
-    window.location.href = `https://www.sandbox.paypal.com/checkoutnow?token=${orderData.orderID}`;
-
-    // 3. Capture Payment after approval
-    const captureResponse = await fetch('http://localhost:5000/api/payment/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderID: orderData.orderID, adId })
-    });
-
-    if (captureResponse.ok) {
-      alert('Payment successful! Ad is now confirmed and live.');
-      setApprovedAds((prevAds) => prevAds.filter((ad) => ad._id !== adId));
-    } else {
-      throw new Error('Failed to confirm ad');
-    }
-  }
-};
-
-// PayPalButton.js
-const PayPalButton = ({ ad, onPaymentSuccess }) => {
-  const { _id: adId, selectedSpaces, price } = ad;
-  const [sdkReady, setSdkReady] = useState(false);
-
-  useEffect(() => {
-    // Function to load PayPal SDK script
-    const loadPayPalScript = () => {
-      const script = document.createElement('script');
-      script.src = `https://www.paypal.com/sdk/js?client-id=ARhUfILu_ITBqjUd1vV86jPRIRiBV3m0sU4zErkRVlLY6hQ8NHtKuJGWZEmrvJLXl17BhVnI6YyIK1es&currency=USD`;
-      script.async = true;
-      script.onload = () => setSdkReady(true);
-      document.body.appendChild(script);
+    const openModal = (ad) => {
+        setSelectedAd(ad);
     };
 
-    // Load the script if it's not already available
-    if (!window.paypal) {
-      loadPayPalScript();
-    } else {
-      setSdkReady(true);
-    }
-  }, []);
+    const closeModal = () => {
+        setSelectedAd(null);
+    };
 
-  useEffect(() => {
-    if (sdkReady) {
-      window.paypal.Buttons({
-        createOrder: async (data, actions) => {
-          const response = await fetch('http://localhost:5000/api/payment/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ adId, adSpaceId: selectedSpaces[0], price })
-          });
-          const orderData = await response.json();
+    return (
+        <div className="pending-ads-container">
+            <h2 className="title">Pending Ads</h2>
+            <div className="ads-grid">
+                {pendingAds.length ? (
+                    pendingAds.map((ad) => (
+                        <div key={ad._id} className="ad-card pending-ad-card">
+                            <h3 className="business-name">{ad.businessName}</h3>
+                            <p className="business-location">{ad.businessLocation}</p>
+                            <p className="ad-description">{ad.adDescription.substring(0, 50)}...</p>
+                            <button className="view-more-btn" onClick={() => openModal(ad)}>View More</button>
+                        </div>
+                    ))
+                ) : (
+                    <p className="no-ads-message">No pending ads</p>
+                )}
+            </div>
 
-          if (orderData.orderID) {
-            return orderData.orderID;
-          } else {
-            throw new Error('Order creation failed');
-          }
-        },
-        onApprove: async (data, actions) => {
-          const captureResponse = await fetch('http://localhost:5000/api/payment/confirm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderID: data.orderID, adId })
-          });
-          
-          if (captureResponse.ok) {
-            onPaymentSuccess();
-          } else {
-            alert('Payment failed, please try again.');
-          }
-        },
-        onError: (err) => {
-          console.error('PayPal Checkout onError:', err);
-          alert('An error occurred during the payment process. Please try again.');
-        }
-      }).render('#paypal-button-container');
-    }
-  }, [sdkReady, adId, selectedSpaces, price, onPaymentSuccess]);
+            {selectedAd && (
+                <div className="modal-overlay" onClick={closeModal}>
+                    <div className="modal-content pending-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="modal-title">{selectedAd.businessName}</h3>
+                        <p className="modal-subtitle">{selectedAd.businessLocation}</p>
+                        <p className="modal-description">{selectedAd.adDescription}</p>
 
-  if (!sdkReady) return <div>Loading PayPal...</div>;
+                        <div className="modal-section">
+                            <h4 className="section-title">Selected Websites</h4>
+                            <ul className="website-list">
+                                {selectedAd.selectedWebsites.map((website) => (
+                                    <li key={website._id} className="website-item">
+                                        <span className="website-name">{website.websiteName}</span>
+                                        <a className="website-link" href={website.websiteLink} target="_blank" rel="noopener noreferrer">{website.websiteLink}</a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
 
-  return <div id="paypal-button-container"></div>;
-};
+                        <div className="modal-section">
+                            <h4 className="section-title">Selected Categories</h4>
+                            <ul className="category-list">
+                                {selectedAd.selectedCategories.map((category) => (
+                                    <li key={category._id} className="category-item">
+                                        <span className="category-name">{category.categoryName}</span> - {category.description}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
 
-// ApprovedAdsForAdvertiser.js
-import PayPalButton from './PayPalButton'
+                        <div className="modal-section">
+                            <h4 className="section-title">Selected Spaces</h4>
+                            <ul className="space-list">
+                                {selectedAd.selectedSpaces.map((space) => (
+                                    <li key={space._id} className="space-item">
+                                        <span className="space-type">Type: {space.spaceType}</span>
+                                        <span className="space-price">Price: ${space.price}</span>
+                                        <span className="space-availability">Availability: {space.availability}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
 
-const ApprovedAdsForAdvertiser = () => {
-  const { user } = useClerk();
-  const userId = user?.id;
-  const [approvedAds, setApprovedAds] = useState([]);
-  const [selectedAd, setSelectedAd] = useState(null);
+                        <button className="close-modal-btn" onClick={closeModal}>Close</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
-    // fetch of data
-
-  const handleConfirmClick = (ad) => {
-    setSelectedAd(ad);
-  };
-
-  const confirmAdDisplay = async (adId) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/accept/confirm/${adId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-      });
-  };
-
-  const handlePaymentSuccess = () => {
-    if (selectedAd) {
-      confirmAdDisplay(selectedAd._id);
-    }
-  };
-
-};
-
-as the categories and spaces are created by a web owner, the system must calculate the price of category and its spaces price and the ad owner(the one who imports the ad and confirms it to be displayed) will have to pay that money(the sum of category price and it's spaces prices) every minute(like a month subscription). add those changes now
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-create a payment system with paypal using MERN stack with mongodb cloud, user1 will insert his card's information, the price he wants and he will add if they should pay him per minute or per 2 minutes(these will act as a weekly/monthly or yearly subscription, but take it as a testing) and user2 will have to pay him, please be professional on this. don't use "@paypal/checkout-server-sdk" because: npm warn deprecated @paypal/checkout-server-sdk@1.0.3: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info. i'm using clerk in frontend:
-import { useUser } from '@clerk/clerk-react'  
-function Page() { 
-  const { user } = useUser();)
+export default PendingAds;
+use any strategies you want but i want to see the data loads fast, they're taking soooooooo long, they're taking like 30 seconds meanwhile i want them to start appearing once a user opens a page

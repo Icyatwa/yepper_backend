@@ -14,7 +14,7 @@ const adSpaceRoutes = require('./routes/AdSpaceRoutes');
 const apiGeneratorRoutes = require('./routes/ApiGeneratorRoutes');
 const adApprovalRoutes = require('./routes/AdApprovalRoutes');
 const adDisplayRoutes = require('./routes/AdDisplayRoutes');
-// const paymentRoutes = require('./routes/PaymentRoutes');
+const paymentRoutes = require('./routes/PaymentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;

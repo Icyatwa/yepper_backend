@@ -563,17 +563,17 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       { $push: { selectedAds: savedRequestAd._id } }
     );
 
-    // Notify each web owner via email
-    for (const space of adSpaces) {
-      const emailBody = `
-        <h2>New Ad Request for Your Ad Space</h2>
-        <p>Hello,</p>
-        <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
-        <p><strong>Business Name:</strong> ${businessName}</p>
-        <p><strong>Description:</strong> ${adDescription}</p>
-      `;
-      await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
-    }
+    // // Notify each web owner via email
+    // for (const space of adSpaces) {
+    //   const emailBody = `
+    //     <h2>New Ad Request for Your Ad Space</h2>
+    //     <p>Hello,</p>
+    //     <p>An advertiser has selected your ad space. Please review and approve the ad.</p>
+    //     <p><strong>Business Name:</strong> ${businessName}</p>
+    //     <p><strong>Description:</strong> ${adDescription}</p>
+    //   `;
+    //   await sendEmailNotification(space.webOwnerEmail, 'New Ad Request for Your Space', emailBody);
+    // }
 
     res.status(201).json(savedRequestAd);
   } catch (error) {
