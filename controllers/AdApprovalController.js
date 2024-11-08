@@ -74,59 +74,6 @@ exports.approveAd = async (req, res) => {
   }
 };
 
-// exports.confirmAdDisplay = async (req, res) => {
-//   try {
-//     const { adId } = req.params;
-
-//     // First, find and update the ad's confirmation status
-//     const confirmedAd = await ImportAd.findByIdAndUpdate(
-//       adId,
-//       { confirmed: true },
-//       { new: true }
-//     ).populate('selectedSpaces');
-
-//     if (!confirmedAd) {
-//       return res.status(404).json({ message: 'Ad not found' });
-//     }
-
-//     // Now that the ad is confirmed, update all selected ad spaces to include this ad
-//     const spaceUpdates = confirmedAd.selectedSpaces.map(async (spaceId) => {
-//       return AdSpace.findByIdAndUpdate(
-//         spaceId,
-//         { 
-//           $push: { 
-//             activeAds: {
-//               adId: confirmedAd._id,
-//               imageUrl: confirmedAd.imageUrl,
-//               pdfUrl: confirmedAd.pdfUrl,
-//               videoUrl: confirmedAd.videoUrl,
-//               businessName: confirmedAd.businessName,
-//               adDescription: confirmedAd.adDescription
-//             }
-//           }
-//         },
-//         { new: true }
-//       );
-//     });
-
-//     await Promise.all(spaceUpdates);
-
-//     // Notify that the ad is now live
-//     confirmedAd.selectedSpaces.forEach(space => {
-//       console.log(`Ad is now live on space ID: ${space._id}`);
-//     });
-
-//     res.status(200).json({ 
-//       message: 'Ad confirmed and now live on selected spaces',
-//       ad: confirmedAd
-//     });
-
-//   } catch (error) {
-//     console.error('Error confirming ad display:', error);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// };
-
 exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
   const { userId } = req.params;
 
@@ -167,134 +114,187 @@ exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
   }
 };
 
-exports.initiateAdPayment = async (req, res) => {
-  console.log('Received initiate-payment request:', req.body); // Log request body for debugging
-
+exports.confirmAdDisplay = async (req, res) => {
   try {
-    const { adId, amount, email, phoneNumber, userId } = req.body;
+    const { adId } = req.params;
 
-    // Validate required fields and provide detailed messages
-    if (!adId) {
-      console.error('Missing adId');
-      return res.status(400).json({ message: 'Missing required field: adId' });
-    }
-    if (!amount) {
-      console.error('Missing amount');
-      return res.status(400).json({ message: 'Missing required field: amount' });
-    }
-    if (isNaN(amount) || amount <= 0) {
-      console.error('Invalid amount:', amount);
-      return res.status(400).json({ message: 'Invalid amount: must be a positive number' });
-    }
-    if (!email) {
-      console.error('Missing email');
-      return res.status(400).json({ message: 'Missing required field: email' });
-    }
-    if (!phoneNumber) {
-      console.error('Missing phoneNumber');
-      return res.status(400).json({ message: 'Missing required field: phoneNumber' });
-    }
-    if (!userId) {
-      console.error('Missing userId');
-      return res.status(400).json({ message: 'Missing required field: userId' });
+    // First, find and update the ad's confirmation status
+    const confirmedAd = await ImportAd.findByIdAndUpdate(
+      adId,
+      { confirmed: true },
+      { new: true }
+    ).populate('selectedSpaces');
+
+    if (!confirmedAd) {
+      return res.status(404).json({ message: 'Ad not found' });
     }
 
-    const tx_ref = 'CARDPAY-' + Date.now();
-
-    // Attempt to save payment record, log any errors
-    try {
-      const payment = new Payment({
-        tx_ref,
-        amount,
-        currency: 'RWF',
-        email,
-        phoneNumber,
-        userId,
-        adId,
-        status: 'pending'
-      });
-      await payment.save();
-      console.log('Payment record created successfully:', payment);
-    } catch (error) {
-      console.error('Error saving payment record:', error);
-      return res.status(500).json({ message: 'Error saving payment record', error });
-    }
-
-    // Prepare payment payload for external API
-    const paymentPayload = {
-      tx_ref,
-      amount,
-      currency: 'RWF',
-      redirect_url: 'http://localhost:5000/api/accept/callback',
-      customer: {
-        email: email,
-        phonenumber: phoneNumber,
-      },
-      payment_options: 'card',
-      customizations: {
-        title: 'Ad Payment',
-        description: 'Confirm and pay for your ad display',
-      },
-    };
-
-    // Initiate payment with Flutterwave
-    try {
-      const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
-        headers: {
-          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-          'Content-Type': 'application/json',
+    // Now that the ad is confirmed, update all selected ad spaces to include this ad
+    const spaceUpdates = confirmedAd.selectedSpaces.map(async (spaceId) => {
+      return AdSpace.findByIdAndUpdate(
+        spaceId,
+        { 
+          $push: { 
+            activeAds: {
+              adId: confirmedAd._id,
+              imageUrl: confirmedAd.imageUrl,
+              pdfUrl: confirmedAd.pdfUrl,
+              videoUrl: confirmedAd.videoUrl,
+              businessName: confirmedAd.businessName,
+              adDescription: confirmedAd.adDescription
+            }
+          }
         },
-      });
-
-      if (response.data && response.data.data && response.data.data.link) {
-        console.log('Payment link generated successfully:', response.data.data.link);
-        return res.status(200).json({ paymentLink: response.data.data.link });
-      } else {
-        console.error('Failed to generate payment link:', response.data);
-        return res.status(500).json({ message: 'Payment initiation failed', error: response.data });
-      }
-    } catch (error) {
-      console.error('Error with Flutterwave payment initiation:', error.response?.data || error.message);
-      return res.status(500).json({ message: 'Error initiating payment with Flutterwave', error: error.response?.data || error.message });
-    }
-  } catch (error) {
-    console.error('Unexpected error in initiateAdPayment:', error);
-    res.status(500).json({ message: 'Unexpected error in payment initiation', error });
-  }
-};
-
-exports.adPaymentCallback = async (req, res) => {
-  try {
-    const { tx_ref, transaction_id } = req.query;
-
-    const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
-      headers: {
-        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
-      }
-    });
-
-    const { status } = transactionVerification.data.data;
-
-    if (status === 'successful') {
-      const payment = await Payment.findOneAndUpdate(
-        { tx_ref },
-        { status: 'successful' },
         { new: true }
       );
+    });
 
-      if (payment) {
-        await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
-      }
+    await Promise.all(spaceUpdates);
 
-      return res.redirect('http://localhost:3000/ads/confirmed');
-    } else {
-      await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-      return res.redirect('http://localhost:3000/ads/failed');
-    }
+    // Notify that the ad is now live
+    confirmedAd.selectedSpaces.forEach(space => {
+      console.log(`Ad is now live on space ID: ${space._id}`);
+    });
+
+    res.status(200).json({ 
+      message: 'Ad confirmed and now live on selected spaces',
+      ad: confirmedAd
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Payment verification failed', error });
+    console.error('Error confirming ad display:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+// exports.initiateAdPayment = async (req, res) => {
+//   console.log('Received initiate-payment request:', req.body); // Log request body for debugging
+
+//   try {
+//     const { adId, amount, email, phoneNumber, userId } = req.body;
+
+//     // Validate required fields and provide detailed messages
+//     if (!adId) {
+//       console.error('Missing adId');
+//       return res.status(400).json({ message: 'Missing required field: adId' });
+//     }
+//     if (!amount) {
+//       console.error('Missing amount');
+//       return res.status(400).json({ message: 'Missing required field: amount' });
+//     }
+//     if (isNaN(amount) || amount <= 0) {
+//       console.error('Invalid amount:', amount);
+//       return res.status(400).json({ message: 'Invalid amount: must be a positive number' });
+//     }
+//     if (!email) {
+//       console.error('Missing email');
+//       return res.status(400).json({ message: 'Missing required field: email' });
+//     }
+//     if (!phoneNumber) {
+//       console.error('Missing phoneNumber');
+//       return res.status(400).json({ message: 'Missing required field: phoneNumber' });
+//     }
+//     if (!userId) {
+//       console.error('Missing userId');
+//       return res.status(400).json({ message: 'Missing required field: userId' });
+//     }
+
+//     const tx_ref = 'CARDPAY-' + Date.now();
+
+//     // Attempt to save payment record, log any errors
+//     try {
+//       const payment = new Payment({
+//         tx_ref,
+//         amount,
+//         currency: 'RWF',
+//         email,
+//         phoneNumber,
+//         userId,
+//         adId,
+//         status: 'pending'
+//       });
+//       await payment.save();
+//       console.log('Payment record created successfully:', payment);
+//     } catch (error) {
+//       console.error('Error saving payment record:', error);
+//       return res.status(500).json({ message: 'Error saving payment record', error });
+//     }
+
+//     // Prepare payment payload for external API
+//     const paymentPayload = {
+//       tx_ref,
+//       amount,
+//       currency: 'RWF',
+//       redirect_url: 'http://localhost:5000/api/accept/callback',
+//       customer: {
+//         email: email,
+//         phonenumber: phoneNumber,
+//       },
+//       payment_options: 'card',
+//       customizations: {
+//         title: 'Ad Payment',
+//         description: 'Confirm and pay for your ad display',
+//       },
+//     };
+
+//     // Initiate payment with Flutterwave
+//     try {
+//       const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
+//         headers: {
+//           Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+//           'Content-Type': 'application/json',
+//         },
+//       });
+
+//       if (response.data && response.data.data && response.data.data.link) {
+//         console.log('Payment link generated successfully:', response.data.data.link);
+//         return res.status(200).json({ paymentLink: response.data.data.link });
+//       } else {
+//         console.error('Failed to generate payment link:', response.data);
+//         return res.status(500).json({ message: 'Payment initiation failed', error: response.data });
+//       }
+//     } catch (error) {
+//       console.error('Error with Flutterwave payment initiation:', error.response?.data || error.message);
+//       return res.status(500).json({ message: 'Error initiating payment with Flutterwave', error: error.response?.data || error.message });
+//     }
+//   } catch (error) {
+//     console.error('Unexpected error in initiateAdPayment:', error);
+//     res.status(500).json({ message: 'Unexpected error in payment initiation', error });
+//   }
+// };
+
+// exports.adPaymentCallback = async (req, res) => {
+//   try {
+//     const { tx_ref, transaction_id } = req.query;
+
+//     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
+//       headers: {
+//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
+//       }
+//     });
+
+//     const { status } = transactionVerification.data.data;
+
+//     if (status === 'successful') {
+//       const payment = await Payment.findOneAndUpdate(
+//         { tx_ref },
+//         { status: 'successful' },
+//         { new: true }
+//       );
+
+//       if (payment) {
+//         await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
+//       }
+
+//       return res.redirect('http://localhost:3000/ads/confirmed');
+//     } else {
+//       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
+//       return res.redirect('http://localhost:3000/ads/failed');
+//     }
+//   } catch (error) {
+//     res.status(500).json({ message: 'Payment verification failed', error });
+//   }
+// };
 
 exports.getApprovedAds = async (req, res) => {
   try {

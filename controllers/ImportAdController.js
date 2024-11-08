@@ -483,16 +483,27 @@ const sendEmailNotification = require('./emailService');
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
+  // fileFilter: (req, file, cb) => {
+  //   const fileTypes = /jpeg|jpg|png|pdf|mp4/;
+  //   const mimeType = fileTypes.test(file.mimetype);
+  //   const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+
+  //   if (mimeType && extname) {
+  //     return cb(null, true);
+  //   }
+  //   cb(new Error('Invalid file type'));
+  // }
   fileFilter: (req, file, cb) => {
-    const fileTypes = /jpeg|jpg|png|pdf|mp4/;
+    const fileTypes = /jpeg|jpg|png|gif|bmp|webp|tiff|svg/;
     const mimeType = fileTypes.test(file.mimetype);
     const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
-
+  
     if (mimeType && extname) {
       return cb(null, true);
     }
     cb(new Error('Invalid file type'));
   }
+  
 });
 
 exports.createImportAd = [upload.single('file'), async (req, res) => {
