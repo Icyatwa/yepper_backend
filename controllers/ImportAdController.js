@@ -649,7 +649,7 @@ exports.getProjectsByUserId = async (req, res) => {
       .populate('selectedWebsites', 'websiteName websiteLink')
       .populate('selectedCategories', 'categoryName description')
       .populate('selectedSpaces', 'spaceType price availability')
-      .select('businessName businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
+      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
 
     const pendingAds = await ImportAd.find({ userId, approved: false })
       .lean()
