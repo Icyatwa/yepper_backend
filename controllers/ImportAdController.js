@@ -627,7 +627,7 @@ exports.getAdsByUserId = async (req, res) => {
   try {
     const ads = await ImportAd.find({ userId })
       .lean()  // Faster data retrieval
-      .select('businessName businessLocation adDescription approved');
+      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
 
     if (!ads.length) {
       return res.status(404).json({ message: 'No ads found for this user' });
