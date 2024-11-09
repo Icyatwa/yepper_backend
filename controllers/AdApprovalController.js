@@ -114,6 +114,25 @@ exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
   }
 };
 
+exports.getAdDetails = async (req, res) => {
+  const { adId } = req.params;
+
+  try {
+    const ad = await ImportAd.findById(adId)
+      .populate('selectedCategories', 'price ownerId')
+      .populate('selectedSpaces', 'price webOwnerEmail');
+
+    if (!ad) {
+      return res.status(404).json({ message: 'Ad not found' });
+    }
+
+    res.status(200).json(ad);
+  } catch (error) {
+    console.error('Error fetching ad details:', error);
+    res.status(500).json({ message: 'Failed to fetch ad details', error });
+  }
+};
+
 exports.confirmAdDisplay = async (req, res) => {
   try {
     const { adId } = req.params;

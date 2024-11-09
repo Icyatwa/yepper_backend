@@ -6,6 +6,7 @@ const adApprovalController = require('../controllers/AdApprovalController');
 router.get('/pending/:ownerId', adApprovalController.getPendingAds);
 router.put('/approve/:adId', adApprovalController.approveAd);
 router.get('/approved-awaiting-confirmation/:userId', adApprovalController.getApprovedAdsAwaitingConfirmation);
+router.get('/ad-details/:adId', adApprovalController.getAdDetails);
 router.put('/confirm/:adId', adApprovalController.confirmAdDisplay);
 // router.post('/initiate-payment', adApprovalController.initiateAdPayment);
 // router.get('/callback', adApprovalController.adPaymentCallback);

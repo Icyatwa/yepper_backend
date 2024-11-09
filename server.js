@@ -15,6 +15,8 @@ const apiGeneratorRoutes = require('./routes/ApiGeneratorRoutes');
 const adApprovalRoutes = require('./routes/AdApprovalRoutes');
 const adDisplayRoutes = require('./routes/AdDisplayRoutes');
 const paymentRoutes = require('./routes/PaymentRoutes');
+const pictureRoutes = require('./routes/PictureRoutes');
+const payoutRoutes = require('./routes/payoutRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,7 +34,9 @@ app.use('/api/ad-spaces', adSpaceRoutes);
 app.use('/api/generate-api', apiGeneratorRoutes);
 app.use('/api/accept', adApprovalRoutes);
 app.use('/api/ads', adDisplayRoutes);
-// app.use('/api/payment', paymentRoutes);
+app.use('/api/picture', pictureRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/payout', payoutRoutes);
 
 const server = http.createServer(app);
 const io = socketIo(server);
