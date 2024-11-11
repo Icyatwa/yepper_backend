@@ -74,40 +74,97 @@ exports.approveAd = async (req, res) => {
   }
 };
 
+// exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
+//   const { userId } = req.params;
+
+//   try {
+//     const approvedAds = await ImportAd.find({
+//       userId,
+//       approved: true,
+//       confirmed: false,
+//     })
+//       .populate({
+//         path: 'selectedCategories',
+//         select: 'price ownerId', // Include ownerId here
+//       })
+//       .populate({
+//         path: 'selectedSpaces',
+//         select: 'price webOwnerEmail', // Include webOwnerEmail here
+//       });
+
+//     // Calculate total price for each ad and include owner info
+//     const adsWithTotalPrices = approvedAds.map(ad => {
+//       const categoryPriceSum = ad.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
+//       const spacePriceSum = ad.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
+//       const totalPrice = categoryPriceSum + spacePriceSum;
+
+//       // Include ownerId and webOwnerEmail in the response
+//       return {
+//         ...ad.toObject(),
+//         totalPrice,
+//         categoryOwnerIds: ad.selectedCategories.map(cat => cat.ownerId),
+//         spaceOwnerEmails: ad.selectedSpaces.map(space => space.webOwnerEmail),
+//       };
+//     });
+
+//     res.status(200).json(adsWithTotalPrices);
+//   } catch (error) {
+//     console.error('Error fetching approved ads:', error);
+//     res.status(500).json({ message: 'Failed to fetch approved ads', error });
+//   }
+// };
+
+// exports.getAdDetails = async (req, res) => {
+//   const { adId } = req.params;
+
+//   try {
+//     const ad = await ImportAd.findById(adId)
+//       .populate('selectedCategories', 'price ownerId')
+//       .populate('selectedSpaces', 'price webOwnerEmail');
+
+//     if (!ad) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
+
+//     res.status(200).json(ad);
+//   } catch (error) {
+//     console.error('Error fetching ad details:', error);
+//     res.status(500).json({ message: 'Failed to fetch ad details', error });
+//   }
+// };
+
 exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
   const { userId } = req.params;
 
   try {
     const approvedAds = await ImportAd.find({
       userId,
-      approved: true,
-      confirmed: false,
+      approved: true
     })
       .populate({
         path: 'selectedCategories',
-        select: 'price ownerId', // Include ownerId here
+        select: 'price ownerId',
       })
       .populate({
         path: 'selectedSpaces',
-        select: 'price webOwnerEmail', // Include webOwnerEmail here
+        select: 'price webOwnerEmail',
       });
 
-    // Calculate total price for each ad and include owner info
-    const adsWithTotalPrices = approvedAds.map(ad => {
+    const adsWithDetails = approvedAds.map(ad => {
       const categoryPriceSum = ad.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
       const spacePriceSum = ad.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
       const totalPrice = categoryPriceSum + spacePriceSum;
 
-      // Include ownerId and webOwnerEmail in the response
       return {
         ...ad.toObject(),
         totalPrice,
+        isConfirmed: ad.confirmed,
         categoryOwnerIds: ad.selectedCategories.map(cat => cat.ownerId),
         spaceOwnerEmails: ad.selectedSpaces.map(space => space.webOwnerEmail),
       };
     });
 
-    res.status(200).json(adsWithTotalPrices);
+    res.status(200).json(adsWithDetails);
   } catch (error) {
     console.error('Error fetching approved ads:', error);
     res.status(500).json({ message: 'Failed to fetch approved ads', error });
@@ -119,8 +176,9 @@ exports.getAdDetails = async (req, res) => {
 
   try {
     const ad = await ImportAd.findById(adId)
-      .populate('selectedCategories', 'price ownerId')
-      .populate('selectedSpaces', 'price webOwnerEmail');
+      .populate('selectedWebsites', 'websiteName websiteLink') // Populate website names and links
+      .populate('selectedCategories', 'categoryName price ownerId')     // Populate category names and prices
+      .populate('selectedSpaces', 'spaceType price webOwnerEmail');           // Populate space types and prices
 
     if (!ad) {
       return res.status(404).json({ message: 'Ad not found' });
