@@ -502,6 +502,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       userId,
       adOwnerEmail,
       businessName,
+      businessLink,
       businessLocation,
       adDescription,
       selectedWebsites,
@@ -544,6 +545,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       pdfUrl,
       videoUrl,
       businessName,
+      businessLink,
       businessLocation,
       adDescription,
       selectedWebsites: websitesArray,
@@ -599,7 +601,7 @@ exports.getAdByIds = async (req, res) => {
   try {
     const ad = await ImportAd.findById(adId)
       .lean()  // Faster loading
-      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
+      .select('businessName businessLink businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
 
     if (!ad) {
       return res.status(404).json({ message: 'Ad not found' });
@@ -617,7 +619,7 @@ exports.getAdsByUserId = async (req, res) => {
   try {
     const ads = await ImportAd.find({ userId })
       .lean()  // Faster data retrieval
-      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
+      .select('businessName businessLink businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
 
     if (!ads.length) {
       return res.status(404).json({ message: 'No ads found for this user' });
@@ -639,14 +641,14 @@ exports.getProjectsByUserId = async (req, res) => {
       .populate('selectedWebsites', 'websiteName websiteLink')
       .populate('selectedCategories', 'categoryName description')
       .populate('selectedSpaces', 'spaceType price availability')
-      .select('businessName businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
+      .select('businessName businessLink businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
 
     const pendingAds = await ImportAd.find({ userId, approved: false })
       .lean()
       .populate('selectedWebsites', 'websiteName websiteLink')
       .populate('selectedCategories', 'categoryName description')
       .populate('selectedSpaces', 'spaceType price availability')
-      .select('businessName businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
+      .select('businessName businessLink businessLocation adDescription approved selectedWebsites selectedCategories selectedSpaces');
       
     res.status(200).json({
       approvedAds,

@@ -161,6 +161,8 @@ exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
         isConfirmed: ad.confirmed,
         categoryOwnerIds: ad.selectedCategories.map(cat => cat.ownerId),
         spaceOwnerEmails: ad.selectedSpaces.map(space => space.webOwnerEmail),
+        clicks: ad.clicks,  // Include clicks
+        views: ad.views     // Include views
       };
     });
 
