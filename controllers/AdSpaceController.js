@@ -114,7 +114,7 @@ const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDa
             // Increment view count
             adContainer.querySelectorAll('.ad').forEach(adElement => {
               const adId = adElement.getAttribute('data-ad-id');
-              fetch("http://localhost:5000/api/ads/view", {
+              fetch("https://yepper-backend.onrender.com/api/ads/view", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ adId })
@@ -127,7 +127,7 @@ const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDa
               rotateAds(ads);
               ads.forEach(ad => ad.addEventListener('click', () => {
                 const adId = ad.getAttribute('data-ad-id');
-                fetch("http://localhost:5000/api/ads/click", {
+                fetch("https://yepper-backend.onrender.com/api/ads/click", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ adId })
