@@ -148,7 +148,8 @@ exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
       .populate({
         path: 'selectedSpaces',
         select: 'price webOwnerEmail',
-      });
+      })
+      .populate('selectedWebsites', 'websiteName websiteLink')
 
     const adsWithDetails = approvedAds.map(ad => {
       const categoryPriceSum = ad.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
@@ -178,9 +179,9 @@ exports.getAdDetails = async (req, res) => {
 
   try {
     const ad = await ImportAd.findById(adId)
-      .populate('selectedWebsites', 'websiteName websiteLink') // Populate website names and links
-      .populate('selectedCategories', 'categoryName price ownerId')     // Populate category names and prices
-      .populate('selectedSpaces', 'spaceType price webOwnerEmail');           // Populate space types and prices
+      .populate('selectedWebsites', 'websiteName websiteLink')
+      .populate('selectedCategories', 'categoryName price ownerId')
+      .populate('selectedSpaces', 'spaceType price webOwnerEmail');
 
     if (!ad) {
       return res.status(404).json({ message: 'Ad not found' });
