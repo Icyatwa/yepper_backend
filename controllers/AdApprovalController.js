@@ -149,7 +149,7 @@ exports.getApprovedAdsAwaitingConfirmation = async (req, res) => {
         path: 'selectedSpaces',
         select: 'price webOwnerEmail',
       })
-      .populate('selectedWebsites', 'websiteName websiteLink')
+      .populate('selectedWebsites', 'websiteName websiteLink logoUrl')
 
     const adsWithDetails = approvedAds.map(ad => {
       const categoryPriceSum = ad.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
