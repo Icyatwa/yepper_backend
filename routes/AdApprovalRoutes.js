@@ -4,6 +4,7 @@ const router = express.Router();
 const adApprovalController = require('../controllers/AdApprovalController');
 
 router.get('/pending/:ownerId', adApprovalController.getPendingAds);
+router.get('/pending-ad/:adId', adApprovalController.getPendingAdById);
 router.put('/approve/:adId', adApprovalController.approveAd);
 router.get('/approved-awaiting-confirmation/:userId', adApprovalController.getApprovedAdsAwaitingConfirmation);
 router.get('/ad-details/:adId', adApprovalController.getAdDetails);

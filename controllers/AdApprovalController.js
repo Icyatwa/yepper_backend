@@ -36,6 +36,26 @@ exports.getPendingAds = async (req, res) => {
   }
 };
 
+exports.getPendingAdById = async (req, res) => {
+  try {
+    const { adId } = req.params;
+    console.log('Fetching ad with ID:', adId); // Debugging log
+
+    const ad = await ImportAd.findById(adId)
+      .populate('selectedSpaces selectedCategories selectedWebsites');
+
+    if (!ad) {
+      console.log('Ad not found for ID:', adId); // Log when ad is missing
+      return res.status(404).json({ message: 'Ad not found' });
+    }
+
+    res.status(200).json(ad);
+  } catch (error) {
+    console.error('Error fetching ad:', error); // Catch any unexpected errors
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 exports.approveAd = async (req, res) => {
   try {
     const { adId } = req.params;
