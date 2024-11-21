@@ -325,7 +325,7 @@ exports.initiateAdPayment = async (req, res) => {
       tx_ref,
       amount,
       currency: 'RWF',
-      redirect_url: 'http://localhost:5000/api/accept/callback',
+      redirect_url: 'https://yepper-backend.onrender.com/api/accept/callback',
       customer: {
         email: email,
         phonenumber: phoneNumber,
@@ -386,10 +386,10 @@ exports.adPaymentCallback = async (req, res) => {
         await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
       }
 
-      return res.redirect('http://localhost:3000/ads/confirmed');
+      return res.redirect('https://yepper.vercel.app/dashboard');
     } else {
       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-      return res.redirect('http://localhost:3000/ads/failed');
+      return res.redirect('https://yepper.vercel.app');
     }
   } catch (error) {
     res.status(500).json({ message: 'Payment verification failed', error });
