@@ -23,8 +23,8 @@ const paymentSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'successful', 'failed'], default: 'pending' },
   email: { type: String, required: false },
   phoneNumber: { type: String, required: true },
-  userId: { type: String, required: true }, // ID of the user who paid
-  pictureId: { type: String, required: true }, // ID of the picture being paid for
+  userId: { type: String, required: true },
+  // pictureId: { type: String, required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payment', paymentSchema);
