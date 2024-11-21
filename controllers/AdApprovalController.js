@@ -416,44 +416,34 @@ exports.adPaymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
 
-    // Verify the transaction status
     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
       headers: {
-        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      },
+        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
+      }
     });
 
     const { status } = transactionVerification.data.data;
 
-    // Fetch the payment record using tx_ref
-    const payment = await Payment.findOne({ tx_ref });
-
-    if (!payment) {
-      console.error('Payment record not found for tx_ref:', tx_ref);
-      return res.status(404).json({ message: 'Payment record not found' });
-    }
-
     if (status === 'successful') {
-      // Update the payment status to successful
-      payment.status = 'successful';
-      await payment.save();
+      const payment = await Payment.findOneAndUpdate(
+        { tx_ref },
+        { status: 'successful' },
+        { new: true }
+      );
 
-      // Confirm the ad associated with the payment
-      await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
+      if (payment) {
+        // Confirm the related ad
+        await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
 
-      console.log(`Ad ${payment.adId} confirmed successfully.`);
-      return res.redirect('https://yepper.vercel.app/dashboard');
+        return res.redirect('https://yepper.vercel.app/dashboard'); // Redirect user after successful payment
+      }
     } else {
-      // Update the payment status to failed
-      payment.status = 'failed';
-      await payment.save();
-
-      console.error(`Payment for tx_ref ${tx_ref} failed.`);
+      await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
       return res.redirect('https://yepper.vercel.app');
     }
   } catch (error) {
-    console.error('Error in adPaymentCallback:', error);
-    return res.status(500).json({ message: 'An error occurred', error });
+    console.error('Error in payment callback:', error);
+    res.status(500).send('Error verifying payment');
   }
 };
 

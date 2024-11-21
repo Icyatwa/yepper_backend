@@ -24,6 +24,7 @@ const paymentSchema = new mongoose.Schema({
   email: { type: String, required: false },
   phoneNumber: { type: String, required: true },
   userId: { type: String, required: true },
+  adId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd', required: true }, // Ensure adId is stored
   // pictureId: { type: String, required: true },
 }, { timestamps: true });
 
