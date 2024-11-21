@@ -198,37 +198,36 @@ exports.getAdDetails = async (req, res) => {
   const { adId } = req.params;
 
   try {
-    const approvedAds = await ImportAd.findById(adId)
+    const approvedAd = await ImportAd.findById(adId)
       .populate('selectedWebsites', 'websiteName websiteLink')
       .populate('selectedCategories', 'categoryName price ownerId')
       .populate('selectedSpaces', 'spaceType price webOwnerEmail');
 
-    const adsWithDetails = approvedAds.map(ad => {
-      const categoryPriceSum = ad.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
-      const spacePriceSum = ad.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
-      const totalPrice = categoryPriceSum + spacePriceSum;
-
-      return {
-        ...ad.toObject(),
-        totalPrice,
-        isConfirmed: ad.confirmed,
-        categoryOwnerIds: ad.selectedCategories.map(cat => cat.ownerId),
-        spaceOwnerEmails: ad.selectedSpaces.map(space => space.webOwnerEmail),
-        clicks: ad.clicks,  // Include clicks
-        views: ad.views     // Include views
-      };
-    });
-
-    if (!approvedAds) {
+    if (!approvedAd) {
       return res.status(404).json({ message: 'Ad not found' });
     }
 
-    res.status(200).json(adsWithDetails);
+    const categoryPriceSum = approvedAd.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
+    const spacePriceSum = approvedAd.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
+    const totalPrice = categoryPriceSum + spacePriceSum;
+
+    const adDetails = {
+      ...approvedAd.toObject(),
+      totalPrice,
+      isConfirmed: approvedAd.confirmed,
+      categoryOwnerIds: approvedAd.selectedCategories.map((cat) => cat.ownerId),
+      spaceOwnerEmails: approvedAd.selectedSpaces.map((space) => space.webOwnerEmail),
+      clicks: approvedAd.clicks,  // Include clicks
+      views: approvedAd.views,   // Include views
+    };
+
+    res.status(200).json(adDetails);
   } catch (error) {
     console.error('Error fetching ad details:', error);
     res.status(500).json({ message: 'Failed to fetch ad details', error });
   }
 };
+
 
 // exports.confirmAdDisplay = async (req, res) => {
 //   try {
