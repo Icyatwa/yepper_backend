@@ -81,7 +81,7 @@ const ImportAd = require('../models/ImportAdModel');
 // };
 
 const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDate = null, endDate = null) => {
-  const apiUrl = `http://localhost:5000/api/ads/display?space=${spaceId}&website=${websiteId}&category=${categoryId}`;
+  const apiUrl = `https://yepper-backend.onrender.com/api/ads/display?space=${spaceId}&website=${websiteId}&category=${categoryId}`;
 
   const dateCheckScript = startDate && endDate
     ? `const now = new Date();
