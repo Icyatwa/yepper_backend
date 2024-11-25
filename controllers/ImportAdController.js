@@ -128,10 +128,10 @@
 
 // ImportAdController.js
 const ImportAd = require('../models/ImportAdModel');
-const AdSpace = require('../models/AdSpaceModel');
+const bucket = require('../config/storage').bucket;
+const generateSignedUrl = require('../config/storage').generateSignedUrl;
 const multer = require('multer');
 const path = require('path');
-const bucket = require('../config/storage');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -161,8 +161,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     const categoriesArray = JSON.parse(selectedCategories);
     const spacesArray = JSON.parse(selectedSpaces);
 
-    let imageUrl = '';
-    let videoUrl = '';
+    let fileUrl = '';
 
     // Upload file to GCS if provided
     if (req.file) {
@@ -172,33 +171,27 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
         contentType: req.file.mimetype,
       });
 
-      // Await for the upload to finish
       await new Promise((resolve, reject) => {
         blobStream.on('error', (err) => {
           console.error('Upload error:', err);
           reject(new Error('Failed to upload file.'));
         });
 
-        blobStream.on('finish', () => {
-          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-          if (req.file.mimetype.startsWith('image')) {
-            imageUrl = publicUrl;
-          } else if (req.file.mimetype.startsWith('video')) {
-            videoUrl = publicUrl;
-          }
-          resolve();
-        });
+        blobStream.on('finish', () => resolve());
 
         blobStream.end(req.file.buffer);
       });
+
+      // Generate a signed URL for the uploaded file
+      fileUrl = await generateSignedUrl(blob.name);
     }
 
     // Create new ad entry
     const newRequestAd = new ImportAd({
       userId,
       adOwnerEmail,
-      imageUrl,
-      videoUrl,
+      imageUrl: req.file?.mimetype.startsWith('image/') ? fileUrl : '',
+      videoUrl: req.file?.mimetype.startsWith('video/') ? fileUrl : '',
       businessName,
       businessLink,
       businessLocation,
@@ -210,11 +203,29 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
 
     const savedRequestAd = await newRequestAd.save();
     res.status(201).json(savedRequestAd);
-  } catch (error) {
-    console.error('Error creating import ad:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
+  } catch (err) {
+    console.error('Error creating ad:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }];
+
+
+exports.getAdsByUserId = async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const ads = await ImportAd.find({ userId })
+      .lean()
+      .select(
+        'businessName businessLink businessLocation adDescription imageUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces'
+      );
+
+    res.status(200).json(ads);
+  } catch (err) {
+    console.error('Error fetching ads:', err);
+    res.status(500).json({ error: 'Failed to fetch ads' });
+  }
+};
 
 exports.getAllAds = async (req, res) => {
   try {
@@ -244,24 +255,24 @@ exports.getAdByIds = async (req, res) => {
   }
 };
 
-exports.getAdsByUserId = async (req, res) => {
-  const userId = req.params.userId;
+// exports.getAdsByUserId = async (req, res) => {
+//   const userId = req.params.userId;
 
-  try {
-    const ads = await ImportAd.find({ userId })
-      .lean()  // Faster data retrieval
-      .select('businessName businessLink businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
+//   try {
+//     const ads = await ImportAd.find({ userId })
+//       .lean()  // Faster data retrieval
+//       .select('businessName businessLink businessLocation adDescription imageUrl pdfUrl videoUrl approved selectedWebsites selectedCategories selectedSpaces');
 
-    if (!ads.length) {
-      return res.status(404).json({ message: 'No ads found for this user' });
-    }
+//     if (!ads.length) {
+//       return res.status(404).json({ message: 'No ads found for this user' });
+//     }
 
-    res.status(200).json(ads);
-  } catch (error) {
-    console.error('Error fetching ads by user ID:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
+//     res.status(200).json(ads);
+//   } catch (error) {
+//     console.error('Error fetching ads by user ID:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
 
 exports.getProjectsByUserId = async (req, res) => {
   const userId = req.params.userId;
