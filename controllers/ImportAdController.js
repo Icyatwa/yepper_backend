@@ -121,17 +121,12 @@
 
 
 
-
-
-
-
-
 // ImportAdController.js
 const ImportAd = require('../models/ImportAdModel');
-const bucket = require('../config/storage').bucket;
-const generateSignedUrl = require('../config/storage').generateSignedUrl;
+const AdSpace = require('../models/AdSpaceModel');
 const multer = require('multer');
 const path = require('path');
+const bucket = require('../config/storage');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -161,7 +156,8 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     const categoriesArray = JSON.parse(selectedCategories);
     const spacesArray = JSON.parse(selectedSpaces);
 
-    let fileUrl = '';
+    let imageUrl = '';
+    let videoUrl = '';
 
     // Upload file to GCS if provided
     if (req.file) {
@@ -177,21 +173,35 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
           reject(new Error('Failed to upload file.'));
         });
 
-        blobStream.on('finish', () => resolve());
+        blobStream.on('finish', async () => {
+          try {
+            console.log('File upload finished, attempting to make public...');
+            await blob.makePublic();
+            console.log('File made public successfully');
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            if (req.file.mimetype.startsWith('image')) {
+              imageUrl = publicUrl;
+            } else if (req.file.mimetype.startsWith('video')) {
+              videoUrl = publicUrl;
+            }
+            resolve();
+          } catch (err) {
+            console.error('Error making file public:', err.message);
+            reject(new Error('Failed to make file public.'));
+          }
+        });
+        
 
         blobStream.end(req.file.buffer);
       });
-
-      // Generate a signed URL for the uploaded file
-      fileUrl = await generateSignedUrl(blob.name);
     }
 
     // Create new ad entry
     const newRequestAd = new ImportAd({
       userId,
       adOwnerEmail,
-      imageUrl: req.file?.mimetype.startsWith('image/') ? fileUrl : '',
-      videoUrl: req.file?.mimetype.startsWith('video/') ? fileUrl : '',
+      imageUrl,
+      videoUrl,
       businessName,
       businessLink,
       businessLocation,
@@ -208,6 +218,13 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }];
+
+
+
+
+
+
+
 
 
 exports.getAdsByUserId = async (req, res) => {
