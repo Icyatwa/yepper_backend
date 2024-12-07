@@ -17,7 +17,7 @@ const adDisplayRoutes = require('./routes/AdDisplayRoutes');
 const paymentRoutes = require('./routes/PaymentRoutes');
 const pictureRoutes = require('./routes/PictureRoutes');
 const payoutRoutes = require('./routes/payoutRoutes');
-const withdrawalRoutes = require('./routes/WithdrawalRoutes');
+// const withdrawalRoutes = require('./routes/WithdrawalRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
