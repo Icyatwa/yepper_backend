@@ -92,7 +92,15 @@ class PayoutService {
     if (!amount || typeof amount !== 'number' || amount <= 0) {
       throw new Error('Invalid amount. Must be a positive number.');
     }
-
+  
+    if (!phoneNumber || !/^(07\d{8})$/.test(phoneNumber)) {
+      throw new Error('Invalid phone number. Must start with 07 and be 10 digits.');
+    }
+  
+    if (!beneficiaryName) {
+      throw new Error('Beneficiary name is required.');
+    }
+  
     if (!userId) {
       throw new Error('User ID is required.');
     }
@@ -142,7 +150,7 @@ exports.initiatePayoutTransfer = async (req, res) => {
     const { amount, phoneNumber, userId, beneficiaryName } = req.body;
 
     // Validate input
-    PayoutService.validatePayoutInput(amount, phoneNumber, userId);
+    PayoutService.validatePayoutInput(amount, phoneNumber, beneficiaryName, userId);
 
     if (!beneficiaryName) {
       return res.status(400).json({ 
@@ -187,8 +195,10 @@ exports.initiatePayoutTransfer = async (req, res) => {
         userId,
         phoneNumber,
         amount,
+        beneficiaryName, // Add this line
         status: response.data.status === 'success' ? 'pending' : 'failed'
       });
+      
       await withdrawal.save({ session });
 
       // Create payment record
