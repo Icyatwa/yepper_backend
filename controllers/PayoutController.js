@@ -88,13 +88,9 @@ const mongoose = require('mongoose');
 
 class PayoutService {
   // Validate input parameters
-  static validatePayoutInput(amount, phoneNumber, userId) {
+  static validatePayoutInput(amount, phoneNumber, beneficiaryName, userId) {
     if (!amount || typeof amount !== 'number' || amount <= 0) {
       throw new Error('Invalid amount. Must be a positive number.');
-    }
-
-    if (!phoneNumber || !/^(07\d{8})$/.test(phoneNumber)) {
-      throw new Error('Invalid phone number. Must start with 07 and be 10 digits.');
     }
 
     if (!userId) {
@@ -114,22 +110,23 @@ class PayoutService {
   }
 
   // Prepare Flutterwave payout payload
-  static preparePayoutPayload(phoneNumber, amount, tx_ref) {
+  static preparePayoutPayload(phoneNumber, amount, tx_ref, beneficiaryName) {
     return {
-      account_bank: "MPS", // Mobile Money Rwanda
-      account_number: phoneNumber,
-      amount: amount,
+      account_bank: "MPS", 
+      account_number: phoneNumber.replace(/^0/, '250'), // Convert leading 0 to 250
+      amount: Number(amount).toFixed(2),
       narration: "Creator Earnings Payout",
       currency: "RWF",
       reference: tx_ref,
+      beneficiary_name: beneficiaryName, // Add beneficiary name
       callback_url: "https://yepper-backend.onrender.com/api/payout/callback"
     };
   }
 
-  // Log detailed error for debugging
   static logDetailedError(error) {
     console.error('Detailed Payout Error:', {
       message: error.message,
+      requestPayload: this.lastPayload, // Store the last payload as a class variable
       response: error.response ? error.response.data : 'No response',
       status: error.response ? error.response.status : 'Unknown',
       headers: error.response ? error.response.headers : 'No headers'
@@ -142,11 +139,17 @@ exports.initiatePayoutTransfer = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { amount, phoneNumber, userId } = req.body;
+    const { amount, phoneNumber, userId, beneficiaryName } = req.body;
 
     // Validate input
     PayoutService.validatePayoutInput(amount, phoneNumber, userId);
 
+    if (!beneficiaryName) {
+      return res.status(400).json({ 
+        message: 'Beneficiary name is required for the transfer'
+      });
+    }
+    
     // Verify user's earnings
     const totalEarnings = await PayoutService.fetchUserEarnings(userId);
 
@@ -162,7 +165,12 @@ exports.initiatePayoutTransfer = async (req, res) => {
     const tx_ref = `PAYOUT-${userId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     // Prepare Flutterwave payout payload
-    const payoutPayload = PayoutService.preparePayoutPayload(phoneNumber, amount, tx_ref);
+    const payoutPayload = PayoutService.preparePayoutPayload(
+      phoneNumber, 
+      amount, 
+      tx_ref, 
+      beneficiaryName
+    );
 
     try {
       // Initiate payout via Flutterwave
