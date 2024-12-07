@@ -198,7 +198,7 @@ exports.initiatePayoutTransfer = async (req, res) => {
         beneficiaryName, // Add this line
         status: response.data.status === 'success' ? 'pending' : 'failed'
       });
-      
+
       await withdrawal.save({ session });
 
       // Create payment record
@@ -209,9 +209,10 @@ exports.initiatePayoutTransfer = async (req, res) => {
         status: response.data.status === 'success' ? 'pending' : 'failed',
         phoneNumber,
         userId,
-        pictureId: null, // No picture associated with payout
+        pictureId: mongoose.Types.ObjectId(), // Generate a new ObjectId
         withdrawalStatus: response.data.status === 'success' ? 'pending' : 'none'
       });
+
       await payment.save({ session });
 
       // Commit transaction

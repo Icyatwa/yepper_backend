@@ -50,7 +50,7 @@ const paymentSchema = new mongoose.Schema({
   email: { type: String, required: false }, 
   phoneNumber: { type: String, required: true },
   userId: { type: String, required: true }, // ID of the user who paid
-  pictureId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Picture' },
+  pictureId: { type: mongoose.Schema.Types.ObjectId, ref: 'Picture' },
   withdrawalStatus: { type: String, enum: ['pending', 'completed', 'none'], default: 'none' }, // Track withdrawals
 }, { timestamps: true });
 
