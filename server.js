@@ -16,7 +16,7 @@ const adApprovalRoutes = require('./routes/AdApprovalRoutes');
 const adDisplayRoutes = require('./routes/AdDisplayRoutes');
 const paymentRoutes = require('./routes/PaymentRoutes');
 const pictureRoutes = require('./routes/PictureRoutes');
-// const payoutRoutes = require('./routes/payoutRoutes');
+const payoutRoutes = require('./routes/payoutRoutes');
 const withdrawalRoutes = require('./routes/WithdrawalRoutes');
 
 const app = express();
@@ -37,7 +37,7 @@ app.use('/api/accept', adApprovalRoutes);
 app.use('/api/ads', adDisplayRoutes);
 app.use('/api/picture', pictureRoutes);
 app.use('/api/payment', paymentRoutes);
-// app.use('/api/payout', payoutRoutes);
+app.use('/api/payout', payoutRoutes);
 app.use('/api/withdraw', withdrawalRoutes);
 
 const server = http.createServer(app);
