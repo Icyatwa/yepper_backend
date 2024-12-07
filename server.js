@@ -35,10 +35,13 @@ app.use('/api/ad-spaces', adSpaceRoutes);
 app.use('/api/generate-api', apiGeneratorRoutes);
 app.use('/api/accept', adApprovalRoutes);
 app.use('/api/ads', adDisplayRoutes);
-app.use('/api/picture', pictureRoutes);
+// app.use('/api/picture', pictureRoutes);
+// app.use('/api/payment', paymentRoutes);
+// app.use('/api/payout', payoutRoutes);
+// app.use('/api/withdraw', withdrawalRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/picture', pictureRoutes);
 app.use('/api/payout', payoutRoutes);
-app.use('/api/withdraw', withdrawalRoutes);
 
 const server = http.createServer(app);
 const io = socketIo(server);
