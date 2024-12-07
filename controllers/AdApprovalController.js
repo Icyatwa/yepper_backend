@@ -3,6 +3,7 @@ const ImportAd = require('../models/ImportAdModel');
 const AdSpace = require('../models/AdSpaceModel');
 const AdCategory = require('../models/AdCategoryModel');
 const Website = require('../models/WebsiteModel');
+const WebOwnerBalance = require('../models/WebOwnerBalanceModel'); // Balance tracking model
 const sendEmailNotification = require('./emailService');
 const Payment = require('../models/PaymentModel');
 const Flutterwave = require('flutterwave-node-v3');
@@ -74,14 +75,14 @@ exports.approveAd = async (req, res) => {
     // Notify the ad owner about approval (implement your notification system here)
     console.log(`Notification: Ad for ${approvedAd.businessName} has been approved. Awaiting confirmation from the ad owner.`);
     
-    // Notify each web owner via email
-      const emailBody = `
-        <h2>Your Ad has been approved</h2>
-        <p>Hello,</p>
-        <p><strong>Business Name:</strong> ${approvedAd.businessName}</p>
-        <p><strong>Description:</strong> ${approvedAd.adDescription}</p>
-      `;
-      await sendEmailNotification(approvedAd.adOwnerEmail, 'New Ad Request for Your Space', emailBody);
+    // // Notify each web owner via email
+    //   const emailBody = `
+    //     <h2>Your Ad has been approved</h2>
+    //     <p>Hello,</p>
+    //     <p><strong>Business Name:</strong> ${approvedAd.businessName}</p>
+    //     <p><strong>Description:</strong> ${approvedAd.adDescription}</p>
+    //   `;
+    //   await sendEmailNotification(approvedAd.adOwnerEmail, 'New Ad Request for Your Space', emailBody);
 
     res.status(200).json({
       message: 'Ad approved successfully. Waiting for advertiser confirmation.',
@@ -228,7 +229,6 @@ exports.getAdDetails = async (req, res) => {
   }
 };
 
-
 // exports.confirmAdDisplay = async (req, res) => {
 //   try {
 //     const { adId } = req.params;
@@ -283,99 +283,65 @@ exports.getAdDetails = async (req, res) => {
 // };
 
 exports.initiateAdPayment = async (req, res) => {
-  console.log('Received initiate-payment request:', req.body); // Log request body for debugging
-
   try {
     const { adId, amount, email, phoneNumber, userId } = req.body;
 
-    // Validate required fields and provide detailed messages
-    if (!adId) {
-      console.error('Missing adId');
-      return res.status(400).json({ message: 'Missing required field: adId' });
-    }
-    if (!amount) {
-      console.error('Missing amount');
-      return res.status(400).json({ message: 'Missing required field: amount' });
-    }
-    if (isNaN(amount) || amount <= 0) {
-      console.error('Invalid amount:', amount);
-      return res.status(400).json({ message: 'Invalid amount: must be a positive number' });
-    }
-    if (!email) {
-      console.error('Missing email');
-      return res.status(400).json({ message: 'Missing required field: email' });
-    }
-    if (!phoneNumber) {
-      console.error('Missing phoneNumber');
-      return res.status(400).json({ message: 'Missing required field: phoneNumber' });
-    }
-    if (!userId) {
-      console.error('Missing userId');
-      return res.status(400).json({ message: 'Missing required field: userId' });
+    if (!userId || userId.trim() === '') {
+      return res.status(400).json({ message: 'Invalid request: User ID is required.' });
     }
 
-    const tx_ref = 'CARDPAY-' + Date.now();
-    // const tx_ref = `CARDPAY-${adId}-${Date.now()}`;
-
-    // Attempt to save payment record, log any errors
-    try {
-      const payment = new Payment({
-        tx_ref,
-        amount,
-        currency: 'RWF',
-        email,
-        phoneNumber,
-        userId,
-        adId,
-        status: 'pending'
-      });
-      await payment.save();
-      console.log('Payment record created successfully:', payment);
-    } catch (error) {
-      console.error('Error saving payment record:', error);
-      return res.status(500).json({ message: 'Error saving payment record', error });
+    const ad = await ImportAd.findById(adId).populate('selectedSpaces');
+    if (!ad || !ad.selectedSpaces || ad.selectedSpaces.length === 0) {
+      return res.status(404).json({ message: 'Ad or selected spaces not found' });
     }
 
-    // Prepare payment payload for external API
+    // Get the web owner ID from the first selected space
+    const webOwnerId = ad.selectedSpaces[0].webOwnerId;
+    if (!webOwnerId) {
+      return res.status(404).json({ message: 'Web owner ID not found for selected spaces.' });
+    }
+
+    const tx_ref = `CARDPAY-${Date.now()}`;
+
+    const payment = new Payment({
+      tx_ref,
+      amount,
+      currency: 'RWF',
+      email,
+      phoneNumber,
+      userId,
+      adId,
+      webOwnerId, // Store the web owner ID in the payment
+      status: 'pending',
+    });
+
+    await payment.save();
+
     const paymentPayload = {
       tx_ref,
       amount,
       currency: 'RWF',
-      redirect_url: 'https://yepper-backend.onrender.com/api/accept/callback',
-      customer: {
-        email: email,
-        phonenumber: phoneNumber,
-      },
+      redirect_url: 'http://localhost:5000/api/accept/callback',
+      customer: { email, phonenumber: phoneNumber },
       payment_options: 'card',
       customizations: {
         title: 'Ad Payment',
-        description: 'Confirm and pay for your ad display',
+        description: 'Payment for ad display',
       },
     };
 
-    // Initiate payment with Flutterwave
-    try {
-      const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
-        headers: {
-          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
+      headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+    });
 
-      if (response.data && response.data.data && response.data.data.link) {
-        console.log('Payment link generated successfully:', response.data.data.link);
-        return res.status(200).json({ paymentLink: response.data.data.link });
-      } else {
-        console.error('Failed to generate payment link:', response.data);
-        return res.status(500).json({ message: 'Payment initiation failed', error: response.data });
-      }
-    } catch (error) {
-      console.error('Error with Flutterwave payment initiation:', error.response?.data || error.message);
-      return res.status(500).json({ message: 'Error initiating payment with Flutterwave', error: error.response?.data || error.message });
+    if (response.data?.data?.link) {
+      res.status(200).json({ paymentLink: response.data.data.link });
+    } else {
+      res.status(500).json({ message: 'Payment initiation failed.' });
     }
   } catch (error) {
-    console.error('Unexpected error in initiateAdPayment:', error);
-    res.status(500).json({ message: 'Unexpected error in payment initiation', error });
+    console.error('Error initiating payment:', error);
+    res.status(500).json({ message: 'Error initiating payment.', error });
   }
 };
 
@@ -399,51 +365,139 @@ exports.initiateAdPayment = async (req, res) => {
 //       );
 
 //       if (payment) {
+//         // Confirm the related ad
 //         await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
-//       }
 
-//       return res.redirect('https://yepper.vercel.app/dashboard');
+//         return res.redirect('https://yepper.vercel.app/dashboard'); // Redirect user after successful payment
+//       }
 //     } else {
 //       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
 //       return res.redirect('https://yepper.vercel.app');
 //     }
 //   } catch (error) {
-//     res.status(500).json({ message: 'Payment verification failed', error });
+//     console.error('Error in payment callback:', error);
+//     res.status(500).send('Error verifying payment');
 //   }
 // };
+
+exports.updateWebOwnerBalance = async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+
+    if (!userId || userId.trim() === '') {
+      return res.status(400).json({ message: 'User ID is required.' });
+    }
+
+    const balanceRecord = await WebOwnerBalance.findOneAndUpdate(
+      { userId },
+      { $inc: { totalEarnings: amount, availableBalance: amount } },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    );
+
+    res.status(200).json({ message: 'Balance updated successfully.', balance: balanceRecord });
+  } catch (error) {
+    console.error('Error updating balance:', error);
+    res.status(500).json({ message: 'Error updating balance.', error: error.message });
+  }
+};
 
 exports.adPaymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
 
+    // Verify the transaction with Flutterwave
     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
       headers: {
-        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
-      }
+        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+      },
     });
 
-    const { status } = transactionVerification.data.data;
+    const { status, customer } = transactionVerification.data.data;
 
     if (status === 'successful') {
-      const payment = await Payment.findOneAndUpdate(
-        { tx_ref },
-        { status: 'successful' },
-        { new: true }
-      );
+      const payment = await Payment.findOne({ tx_ref });
 
       if (payment) {
+        // Update payment status
+        payment.status = 'successful';
+        await payment.save();
+
         // Confirm the related ad
         await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
 
-        return res.redirect('https://yepper.vercel.app/dashboard'); // Redirect user after successful payment
+        // Update the web owner's balance
+        await WebOwnerBalance.findOneAndUpdate(
+          { userId: payment.webOwnerId },
+          {
+            $inc: {
+              totalEarnings: payment.amount,
+              availableBalance: payment.amount,
+            }
+          },
+          { 
+            upsert: true,
+            setDefaultsOnInsert: true 
+          }
+        );
+
+        return res.redirect('http://localhost:3000/approved-ads');
       }
     } else {
       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-      return res.redirect('https://yepper.vercel.app');
+      return res.redirect('http://localhost:3000');
     }
   } catch (error) {
-    console.error('Error in payment callback:', error);
-    res.status(500).send('Error verifying payment');
+    console.error('Error handling payment callback:', error);
+    res.status(500).json({ message: 'Error handling payment callback.', error });
+  }
+};
+
+// Add a new route to get balance
+exports.getWebOwnerBalance = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const balance = await WebOwnerBalance.findOne({ userId });
+
+    if (!balance) {
+      return res.status(404).json({ message: 'No balance found for this user' });
+    }
+
+    res.status(200).json(balance);
+  } catch (error) {
+    console.error('Error fetching balance:', error);
+    res.status(500).json({ 
+      message: 'Error fetching balance', 
+      error: error.message 
+    });
+  }
+};
+
+exports.getOwnerPayments = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const payments = await Payment.find({ webOwnerId: userId });
+
+    if (!payments.length) {
+      return res.status(404).json({ message: 'No payments found for this user' });
+    }
+
+    res.status(200).json({ payments });
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({
+      message: 'Error fetching payments',
+      error: error.message,
+    });
   }
 };
 

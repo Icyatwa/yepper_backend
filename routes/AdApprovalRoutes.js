@@ -11,6 +11,8 @@ router.get('/ad-details/:adId', adApprovalController.getAdDetails);
 // router.put('/confirm/:adId', adApprovalController.confirmAdDisplay);
 router.post('/initiate-payment', adApprovalController.initiateAdPayment);
 router.get('/callback', adApprovalController.adPaymentCallback);
+router.get('/balance/:userId', adApprovalController.getWebOwnerBalance);
+router.get('/payments/:userId', adApprovalController.getOwnerPayments);
 router.get('/approved-ads', adApprovalController.getApprovedAds);
 router.get('/approved/:ownerId', adApprovalController.getApprovedAdsByUser);
 router.get('/user-pending/:userId', adApprovalController.getUserPendingAds);

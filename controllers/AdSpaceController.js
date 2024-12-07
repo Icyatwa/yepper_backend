@@ -178,9 +178,9 @@ const generateApiCodesForAllLanguages = (spaceId, websiteId, categoryId, startDa
 
 exports.createSpace = async (req, res) => {
   try {
-    const { categoryId, spaceType, price, availability, userCount, instructions, startDate, endDate, webOwnerEmail } = req.body;
+    const { webOwnerId, categoryId, spaceType, price, availability, userCount, instructions, startDate, endDate, webOwnerEmail } = req.body;
 
-    if (!categoryId || !spaceType || !price || !availability || !userCount) {
+    if (!webOwnerId || !categoryId || !spaceType || !price || !availability || !userCount) {
       return res.status(400).json({ message: 'All required fields must be provided' });
     }
 
@@ -193,6 +193,7 @@ exports.createSpace = async (req, res) => {
 
     // Create new AdSpace
     const newSpace = new AdSpace({
+      webOwnerId,
       categoryId,
       spaceType,
       price,

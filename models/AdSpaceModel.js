@@ -48,6 +48,7 @@
 const mongoose = require('mongoose');
 
 const adSpaceSchema = new mongoose.Schema({
+  webOwnerId: { type: String, required: true },
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory', required: true },
   spaceType: { type: String, required: true },
   price: { type: Number, required: true, min: 0 },
