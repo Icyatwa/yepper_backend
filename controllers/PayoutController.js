@@ -209,7 +209,7 @@ exports.initiatePayoutTransfer = async (req, res) => {
         status: response.data.status === 'success' ? 'pending' : 'failed',
         phoneNumber,
         userId,
-        pictureId: mongoose.Types.ObjectId(), // Generate a new ObjectId
+        pictureId: null, // Generate a new ObjectId
         withdrawalStatus: response.data.status === 'success' ? 'pending' : 'none'
       });
 
