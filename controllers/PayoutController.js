@@ -105,7 +105,7 @@ class PayoutService {
   // Fetch user earnings
   static async fetchUserEarnings(userId) {
     try {
-      const response = await axios.get(`http://localhost:5000/api/picture/earnings/${userId}`);
+      const response = await axios.get(`https://yepper-backend.onrender.com/api/picture/earnings/${userId}`);
       return response.data.totalEarnings;
     } catch (error) {
       console.error('Error fetching user earnings:', error);
@@ -122,7 +122,7 @@ class PayoutService {
       narration: "Creator Earnings Payout",
       currency: "RWF",
       reference: tx_ref,
-      callback_url: "http://localhost:5000/api/payout/callback"
+      callback_url: "https://yepper-backend.onrender.com/api/payout/callback"
     };
   }
 
