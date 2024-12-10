@@ -1,11 +1,24 @@
 // WebsiteController.js
 const Website = require('../models/WebsiteModel');
+const multer = require('multer');
+const path = require('path');
+const bucket = require('../config/storage');
 
-exports.createWebsite = async (req, res) => {
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|bmp|webp|tiff|svg|avi|mov|mkv|webm/;
+    const isValid = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (isValid) return cb(null, true);
+    cb(new Error('Invalid file type.'));
+  },
+});
+
+exports.createWebsite = [upload.single('file'), async (req, res) => {
   try {
-    const { ownerId, websiteName, websiteLink, logoUrl } = req.body;
+    const { ownerId, websiteName, websiteLink } = req.body;
 
-    if (!ownerId || !websiteName || !websiteLink) {
+    if (!ownerId || !websiteName || !websiteLink || !imageUrl) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -15,11 +28,48 @@ exports.createWebsite = async (req, res) => {
       return res.status(409).json({ message: 'Website URL already exists' });
     }
 
+    let imageUrl = '';
+
+    // Upload file to GCS if provided
+    if (req.file) {
+      const blob = bucket.file(`${Date.now()}-${req.file.originalname}`);
+      const blobStream = blob.createWriteStream({
+        resumable: false,
+        contentType: req.file.mimetype,
+      });
+
+      await new Promise((resolve, reject) => {
+        blobStream.on('error', (err) => {
+          console.error('Upload error:', err);
+          reject(new Error('Failed to upload file.'));
+        });
+
+        blobStream.on('finish', async () => {
+          try {
+            console.log('File upload finished, attempting to make public...');
+            await blob.makePublic();
+            console.log('File made public successfully');
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            if (req.file.mimetype.startsWith('image')) {
+              imageUrl = publicUrl;
+            }
+            resolve();
+          } catch (err) {
+            console.error('Error making file public:', err.message);
+            reject(new Error('Failed to make file public.'));
+          }
+        });
+        
+
+        blobStream.end(req.file.buffer);
+      });
+    }
+
     const newWebsite = new Website({
       ownerId,
       websiteName,
       websiteLink,
-      logoUrl
+      imageUrl
     });
 
     const savedWebsite = await newWebsite.save();
@@ -28,14 +78,14 @@ exports.createWebsite = async (req, res) => {
     console.error('Error creating website:', error); // Log detailed error
     res.status(500).json({ message: 'Failed to create website', error });
   }
-};
+}];
 
 exports.getAllWebsites = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;  // Pagination parameters
   try {
     const websites = await Website.find()
       .lean()  // Use lean for performance
-      .select('ownerId websiteName websiteLink createdAt')  // Fetch only necessary fields
+      .select('ownerId websiteName websiteLink imageUrl createdAt')  // Fetch only necessary fields
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
@@ -50,7 +100,7 @@ exports.getWebsitesByOwner = async (req, res) => {
   try {
     const websites = await Website.find({ ownerId })
       .lean()
-      .select('ownerId websiteName websiteLink createdAt');
+      .select('ownerId websiteName websiteLink imageUrl createdAt');
     res.status(200).json(websites);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch websites', error });
