@@ -5,7 +5,6 @@ const websiteSchema = new mongoose.Schema({
   ownerId: { type: String, required: true },
   websiteName: { type: String, required: true },
   websiteLink: { type: String, required: true, unique: true },
-  // logoUrl: { type: String, required: false },
   imageUrl: { type: String, required: false },
   createdAt: { type: Date, default: Date.now },
 });

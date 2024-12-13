@@ -18,7 +18,7 @@ exports.createWebsite = [upload.single('file'), async (req, res) => {
   try {
     const { ownerId, websiteName, websiteLink } = req.body;
 
-    if (!ownerId || !websiteName || !websiteLink || !imageUrl) {
+    if (!ownerId || !websiteName || !websiteLink) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -60,7 +60,6 @@ exports.createWebsite = [upload.single('file'), async (req, res) => {
           }
         });
         
-
         blobStream.end(req.file.buffer);
       });
     }
