@@ -6,6 +6,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const axios = require('axios');
+const waitlistRoutes = require('./routes/WaitlistRoutes')
 const importAdRoutes = require('./routes/ImportAdRoutes');
 const requestAdRoutes = require('./routes/RequestAdRoutes');
 const websiteRoutes = require('./routes/WebsiteRoutes');
@@ -27,6 +28,7 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use('/api/join-waitlist', waitlistRoutes);
 app.use('/api/importAds', importAdRoutes);
 app.use('/api/requestAd', requestAdRoutes);
 app.use('/api/websites', websiteRoutes);
