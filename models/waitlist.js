@@ -8,14 +8,12 @@
 // module.exports = mongoose.model('Waitlist', waitlistSchema);
 
 
-// models/waitlist.js
 const mongoose = require('mongoose');
 
 const waitlistSchema = new mongoose.Schema({
   email: { 
     type: String, 
     required: true,
-    unique: true,
     lowercase: true,
     trim: true
   },
@@ -31,7 +29,6 @@ const waitlistSchema = new mongoose.Schema({
   },
   referralCode: {
     type: String,
-    unique: true,
     sparse: true
   },
   referredBy: {
@@ -58,9 +55,9 @@ const waitlistSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for performance
-waitlistSchema.index({ email: 1, status: 1 });
-waitlistSchema.index({ referralCode: 1 });
+// Indexes
+waitlistSchema.index({ email: 1 }, { unique: true });
+waitlistSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 waitlistSchema.index({ createdAt: 1 });
 
 module.exports = mongoose.model('Waitlist', waitlistSchema);
